@@ -1,0 +1,159 @@
+// Backend API Tests
+// Test checklist for all backend endpoints
+
+const backendTests = {
+  // Authentication Endpoints
+  authEndpoints: {
+    register: {
+      endpoint: "POST /api/auth/register",
+      testCases: [
+        "✓ Valid registration creates user",
+        "✓ Duplicate email returns error",
+        "✓ Missing fields validation",
+        "✓ Invalid email format rejected",
+        "✓ Verification code generated",
+        "✓ Rate limiting (10 per hour)"
+      ]
+    },
+    login: {
+      endpoint: "POST /api/auth/login",
+      testCases: [
+        "✓ Valid credentials return token",
+        "✓ Invalid email rejected",
+        "✓ Wrong password rejected",
+        "✓ Rate limiting (5 per 15 minutes)",
+        "✓ JWT token format valid"
+      ]
+    },
+    verifyEmail: {
+      endpoint: "POST /api/auth/verify-email",
+      testCases: [
+        "✓ Valid code verifies user",
+        "✓ Invalid code rejected",
+        "✓ Expired code rejected"
+      ]
+    },
+    forgotPassword: {
+      endpoint: "POST /api/auth/forgot-password",
+      testCases: [
+        "✓ Valid email sends reset token",
+        "✓ Email sent successfully",
+        "✓ Non-existent email handled"
+      ]
+    },
+    resetPassword: {
+      endpoint: "POST /api/auth/reset-password",
+      testCases: [
+        "✓ Valid token resets password",
+        "✓ Invalid token rejected",
+        "✓ Password updated in database"
+      ]
+    }
+  },
+
+  // Appointment Endpoints
+  appointmentEndpoints: {
+    getUserAppointments: {
+      endpoint: "GET /api/appointments/user/:userId",
+      testCases: [
+        "✓ Returns user appointments",
+        "✓ Requires authentication",
+        "✓ Filters by month/year",
+        "✓ Returns empty array if no appointments"
+      ]
+    },
+    bookAppointment: {
+      endpoint: "POST /api/appointments/book",
+      testCases: [
+        "✓ Creates appointment successfully",
+        "✓ Requires authentication",
+        "✓ Validates doctor exists",
+        "✓ Validates slot exists",
+        "✓ Prevents double booking",
+        "✓ Returns confirmation"
+      ]
+    },
+    getAdminAppointments: {
+      endpoint: "GET /api/appointments/admin/all",
+      testCases: [
+        "✓ Admin can view all appointments",
+        "✓ Non-admin rejected",
+        "✓ Returns complete list"
+      ]
+    }
+  },
+
+  // Doctor Endpoints
+  doctorEndpoints: {
+    getAllDoctors: {
+      endpoint: "GET /api/doctors",
+      testCases: [
+        "✓ Returns all doctors",
+        "✓ No authentication required",
+        "✓ Returns doctor details"
+      ]
+    },
+    createDoctor: {
+      endpoint: "POST /api/doctors",
+      testCases: [
+        "✓ Admin can create doctor",
+        "✓ Non-admin rejected",
+        "✓ Validates doctor data",
+        "✓ Returns created doctor"
+      ]
+    },
+    updateDoctor: {
+      endpoint: "PUT /api/doctors/:id",
+      testCases: [
+        "✓ Admin can update doctor",
+        "✓ Non-admin rejected",
+        "✓ Validates updated data",
+        "✓ Returns updated doctor"
+      ]
+    },
+    deleteDoctor: {
+      endpoint: "DELETE /api/doctors/:id",
+      testCases: [
+        "✓ Admin can delete doctor",
+        "✓ Non-admin rejected",
+        "✓ Cascades to appointments",
+        "✓ Returns success message"
+      ]
+    }
+  },
+
+  // Profile Endpoints
+  profileEndpoints: {
+    getUserProfile: {
+      endpoint: "GET /api/users/:userId/profile",
+      testCases: [
+        "✓ Returns user profile",
+        "✓ Requires authentication",
+        "✓ Own profile accessible",
+        "✓ Other profiles not accessible"
+      ]
+    },
+    updateProfile: {
+      endpoint: "PUT /api/users/:userId/profile",
+      testCases: [
+        "✓ Updates user profile",
+        "✓ Requires authentication",
+        "✓ Validates profile data",
+        "✓ Returns updated profile"
+      ]
+    }
+  },
+
+  // Security Tests
+  securityTests: [
+    "✓ CORS restricted to frontend URL only",
+    "✓ Rate limiting enforced",
+    "✓ JWT token validation",
+    "✓ Password hashing (bcryptjs)",
+    "✓ SQL injection prevention (parameterized queries)",
+    "✓ Error messages don't leak sensitive info",
+    "✓ Authentication required for protected routes"
+  ]
+};
+
+module.exports = backendTests;

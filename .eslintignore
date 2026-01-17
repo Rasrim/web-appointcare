@@ -1,0 +1,7 @@
+backend/
+node_modules/
+uploads/
+dist/
+.git/
+.env
+.env.local

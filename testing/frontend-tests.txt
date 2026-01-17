@@ -1,0 +1,76 @@
+// Frontend Component Tests
+// Test checklist for all frontend components and pages
+
+const frontendTests = {
+  // Navbar Tests
+  navbarTests: [
+    "✓ Logo displays correctly",
+    "✓ Navigation links work (Home, Dashboard, Profile)",
+    "✓ Mobile menu toggle works",
+    "✓ Logout button clears local storage",
+    "✓ Active page indicator shows correctly"
+  ],
+
+  // Authentication Tests
+  authenticationTests: [
+    "✓ Register form validation works",
+    "✓ Email verification code input works",
+    "✓ Login form validates credentials",
+    "✓ Forgot password email link works",
+    "✓ Reset password form works",
+    "✓ JWT token saved to localStorage"
+  ],
+
+  // Appointment Booking Tests
+  appointmentTests: [
+    "✓ Doctor list loads from API",
+    "✓ Calendar date selection works",
+    "✓ Time slot selection works",
+    "✓ Available slots load for selected date",
+    "✓ Appointment booking submits correctly",
+    "✓ Success/error messages display",
+    "✓ User appointments list shows correctly"
+  ],
+
+  // Admin Dashboard Tests
+  adminTests: [
+    "✓ Doctor CRUD operations work",
+    "✓ Doctor form validation",
+    "✓ Edit doctor functionality",
+    "✓ Delete doctor with confirmation",
+    "✓ All appointments display",
+    "✓ Schedule management works",
+    "✓ Rate limiting works (too many requests)",
+    "✓ Error handling displays properly"
+  ],
+
+  // Profile Tests
+  profileTests: [
+    "✓ User profile loads",
+    "✓ Edit profile form works",
+    "✓ Profile picture upload",
+    "✓ Date picker works",
+    "✓ Blood group selection works"
+  ],
+
+  // Responsive Design Tests
+  responsiveTests: [
+    "✓ Mobile layout (320px)",
+    "✓ Tablet layout (768px)",
+    "✓ Desktop layout (1024px+)",
+    "✓ Navigation responsive",
+    "✓ Forms responsive",
+    "✓ Tables responsive"
+  ],
+
+  // Performance Tests
+  performanceTests: [
+    "✓ Page load time < 3 seconds",
+    "✓ API responses < 1 second",
+    "✓ Images optimized",
+    "✓ No console errors",
+    "✓ Lazy loading works"
+  ]
+};
+
+module.exports = frontendTests;
