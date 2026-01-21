@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import { MdEmail, MdLock, MdCheckCircle } from "react-icons/md";
 import { loginSchema } from "./schema/login.schema";
 import doctorImage from "../../images/docter1.png";
 
@@ -298,6 +299,8 @@ const styles = {
   container: {
     height: "100vh",
     width: "100%",
+    maxWidth: "1400px",
+    margin: "0 auto",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
