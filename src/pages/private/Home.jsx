@@ -1,19 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import logoImage from "../../images/AppointCarenobg.png";
 import doctorImage from "../../images/doctor1.png";
 import SymptomsSection from "../../components/SymptomsSection";
+import HomeNavbar from "../../components/HomeNavbar";
 
 const Home = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [doctors, setDoctors] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fadeIn, setFadeIn] = useState(false);
+  const [fadeIn] = useState(true);
 
   // Fade in animation on mount
   useEffect(() => {
-    setFadeIn(true);
+    // Component mounts with fade-in enabled
+    return () => {};
   }, []);
 
   const handleResize = () => {
@@ -25,61 +24,27 @@ const Home = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Fetch doctors
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/api/doctors");
-        if (response.ok) {
-          const data = await response.json();
-          setDoctors(data);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDoctors();
-  }, []);
-
   return (
     <div style={{ ...styles.container, opacity: fadeIn ? 1 : 0, transition: "opacity 0.5s ease-in" }}>
-      {/* Navbar */}
-      <nav style={styles.navbar}>
-        <div style={styles.navContainer}>
-          <div style={styles.logo}>
-            <img src={logoImage} alt="AppointCare" style={styles.logoImg} />
-            <span style={styles.logoText}>AppointCare</span>
-          </div>
-          <div style={styles.navLinks}>
-            <a href="#doctors" style={styles.navLink}>Book Appointments</a>
-            <a href="#calendar" style={styles.navLink}>Calendar</a>
-            <Link to="/login" style={{ ...styles.navLink, ...styles.loginBtn }}>Login</Link>
-            <Link to="/register" style={styles.registerBtn}>Register</Link>
-          </div>
-        </div>
-      </nav>
+      <HomeNavbar />
 
       {/* Hero Section */}
       <section style={styles.heroSection}>
         <div style={styles.heroContent}>
           <div style={styles.heroText}>
             <h1 style={styles.heroTitle}>
-              No need to visit local hospitals
+              Healthcare at Your Fingertips
             </h1>
             <p style={styles.heroSubtitle}>
-              Book appointments online
+              Book doctor appointments online
             </p>
             <p style={styles.heroDescription}>
-              Your health is our priority
+              Connect with qualified healthcare professionals anytime, anywhere. Say goodbye to long waiting times and hello to convenient online consultations.
             </p>
-            <div style={styles.doctorCount}>
-              <div style={styles.doctorAvatar}>
-                <span>👨‍⚕️</span>
-                <span>👩‍⚕️</span>
-              </div>
-              <span style={styles.doctorCountText}>+18 doctors are available</span>
+            <div style={styles.buttonGroup}>
+              <button style={styles.ctaButton}>Get Started</button>
+              <button style={styles.signInButton}>Sign In</button>
             </div>
-            <button style={styles.ctaButton}>Find doctors</button>
           </div>
 
           {/* Hero Image */}
@@ -92,97 +57,91 @@ const Home = () => {
       </section>
 
       {/* Recommended Doctors Section */}
-      <section style={styles.doctorsSection}>
-        <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>Recommended Doctors</h2>
-          <a href="#" style={styles.viewAllLink}>View All ›</a>
-        </div>
+      
 
-        {!loading && doctors.length > 0 ? (
-          <div style={styles.doctorsContainer}>
-            {doctors.slice(0, 3).map((doctor, index) => (
-              <div key={index} style={styles.doctorCard}>
-                <div style={styles.doctorImageContainer}>
-                  <img 
-                    src={doctor.photo || doctorImage} 
-                    alt={doctor.name}
-                    style={styles.doctorImage}
-                  />
-                </div>
-                <h3 style={styles.doctorName}>{doctor.name}</h3>
-                <p style={styles.doctorSpecialty}>{doctor.specialty}</p>
-                <p style={styles.doctorExperience}>Specialist | {doctor.experience || "5"} years experience</p>
-                <div style={styles.doctorDetails}>
-                  <div style={styles.detailItem}>
-                    <span style={styles.detailIcon}>📅</span>
-                    <span style={styles.detailText}>{doctor.availability || "Tue, Thu"}</span>
-                  </div>
-                  <div style={styles.detailItem}>
-                    <span style={styles.detailIcon}>₹</span>
-                    <span style={styles.detailText}>{doctor.fee || "350"}</span>
-                  </div>
-                </div>
-                <div style={styles.doctorTiming}>
-                  <span style={styles.timingText}>{doctor.timing || "10:00 AM-01:00 PM"}</span>
-                  <span style={styles.startingText}>Starting</span>
-                </div>
-                <button style={styles.appointmentBtn}>Book an appointment</button>
-              </div>
-            ))}
+      {/* Why Choose AppointCare Section */}
+      <section style={styles.whyChooseSection}>
+        <h2 style={styles.whyChooseTitle}>Why Choose AppointCare?</h2>
+        <div style={styles.whyChooseContainer}>
+          <div 
+            style={styles.whyChooseCard}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-5px)";
+              e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
+            }}
+          >
+            <div style={styles.whyChooseIcon}>⏰</div>
+            <h3 style={styles.whyChooseCardTitle}>24/7 Availability</h3>
+            <p style={styles.whyChooseCardText}>Book appointments anytime that suits you best. No more waiting for clinic timings.</p>
           </div>
-        ) : (
-          <div style={styles.noDoctorsMessage}>
-            <p>Loading doctors...</p>
+          <div 
+            style={styles.whyChooseCard}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-5px)";
+              e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
+            }}
+          >
+            <div style={styles.whyChooseIcon}>👨‍⚕️</div>
+            <h3 style={styles.whyChooseCardTitle}>Expert Doctors</h3>
+            <p style={styles.whyChooseCardText}>Access to verified and experienced healthcare professionals from various specialties.</p>
           </div>
-        )}
+          <div 
+            style={styles.whyChooseCard}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-5px)";
+              e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
+            }}
+          >
+            <div style={styles.whyChooseIcon}>🔒</div>
+            <h3 style={styles.whyChooseCardTitle}>Secure & Private</h3>
+            <p style={styles.whyChooseCardText}>Your health information is encrypted and protected with industry-standard security.</p>
+          </div>
+        </div>
       </section>
 
       {/* Symptoms Section */}
       <SymptomsSection />
 
-      {/* Calendar Section for Booking */}
-      <section id="calendar" style={styles.calendarSection}>
-        <div style={styles.calendarWrapper}>
-          <h2 style={styles.sectionTitle}>Book Your Appointment</h2>
-          <p style={styles.calendarSubtitle}>Select a date and time that works best for you</p>
-          
-          <div style={styles.calendarContent}>
-            <div style={styles.miniCalendarContainer}>
-              <h3 style={styles.calendarMonthTitle}>January 2026</h3>
-              <div style={styles.daysOfWeek}>
-                <div style={styles.dayHeader}>Sun</div>
-                <div style={styles.dayHeader}>Mon</div>
-                <div style={styles.dayHeader}>Tue</div>
-                <div style={styles.dayHeader}>Wed</div>
-                <div style={styles.dayHeader}>Thu</div>
-                <div style={styles.dayHeader}>Fri</div>
-                <div style={styles.dayHeader}>Sat</div>
-              </div>
-              <div style={styles.daysGrid}>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                  <button key={day} style={styles.dayButton}>
-                    {day}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={styles.timeSlotContainer}>
-              <h3 style={styles.timeSlotTitle}>Available Time Slots</h3>
-              <div style={styles.timeSlots}>
-                {["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM"].map((time) => (
-                  <button key={time} style={styles.timeSlot}>
-                    {time}
-                  </button>
-                ))}
-              </div>
-              <button style={styles.bookButton}>
-                <Link to="/login" style={{ textDecoration: "none", color: "inherit" }}>
-                  Proceed to Book
-                </Link>
-              </button>
-            </div>
+      {/* Statistics Section */}
+      <section style={styles.statisticsSection}>
+        <div style={styles.statisticsContainer}>
+          <div style={styles.statisticCard}>
+            <div style={styles.statisticNumber}>50K+</div>
+            <div style={styles.statisticLabel}>Happy Patients</div>
           </div>
+          <div style={styles.statisticCard}>
+            <div style={styles.statisticNumber}>500+</div>
+            <div style={styles.statisticLabel}>Verified Doctors</div>
+          </div>
+          <div style={styles.statisticCard}>
+            <div style={styles.statisticNumber}>100K+</div>
+            <div style={styles.statisticLabel}>Appointments Booked</div>
+          </div>
+          <div style={styles.statisticCard}>
+            <div style={styles.statisticNumber}>4.8★</div>
+            <div style={styles.statisticLabel}>Average Rating</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Ready to Book Section */}
+      <section style={styles.readyToBookSection}>
+        <div style={styles.readyToBookContent}>
+          <h2 style={styles.readyToBookTitle}>Ready to Book Your Appointment?</h2>
+          <p style={styles.readyToBookText}>Join thousands of patients who have already experienced convenient healthcare through AppointCare.</p>
+          <button style={styles.readyToBookButton}>Start Now</button>
         </div>
       </section>
 
@@ -235,6 +194,7 @@ const Home = () => {
 
 const styles = {
   container: {
+  
     minHeight: "100vh",
     background: "#fff",
     overflow: "hidden",
@@ -314,17 +274,20 @@ const styles = {
     maxWidth: "1400px",
     margin: "0 auto",
     animation: "slideDown 0.8s ease-out",
+    display: "flex",
+    justifyContent: "center",
   },
   heroContent: {
     display: "flex",
     alignItems: "center",
     gap: "clamp(30px, 5vw, 60px)",
-    justifyContent: "space-between",
+    justifyContent: "center",
     flexWrap: "wrap",
   },
   heroText: {
     flex: 1,
     minWidth: "250px",
+    textAlign: "center",
   },
   heroTitle: {
     fontSize: "clamp(1.8rem, 7vw, 3.5rem)",
@@ -336,7 +299,7 @@ const styles = {
   },
   heroSubtitle: {
     fontSize: "clamp(1.1rem, 4vw, 1.5rem)",
-    color: "#333",
+    color: "#3B82F6",
     marginBottom: "12px",
     animation: "fadeInUp 0.8s ease-out 0.3s both",
   },
@@ -349,6 +312,7 @@ const styles = {
   doctorCount: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: "15px",
     marginBottom: "30px",
     animation: "fadeInUp 0.8s ease-out 0.5s both",
@@ -358,6 +322,7 @@ const styles = {
     display: "flex",
     gap: "8px",
     fontSize: "clamp(1.5rem, 5vw, 2rem)",
+    justifyContent: "center",
   },
   doctorCountText: {
     fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
@@ -375,10 +340,27 @@ const styles = {
     transition: "all 0.3s ease",
     boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
     animation: "fadeInUp 0.8s ease-out 0.6s both",
-    ":hover": {
-      background: "#2563EB",
-      boxShadow: "0 6px 16px rgba(59, 130, 246, 0.4)",
-    },
+  },
+  signInButton: {
+    padding: "clamp(10px, 3vw, 14px) clamp(20px, 5vw, 32px)",
+    background: "transparent",
+    color: "#3B82F6",
+    border: "2px solid #3B82F6",
+    borderRadius: "8px",
+    fontSize: "clamp(0.9rem, 2vw, 1rem)",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    animation: "fadeInUp 0.8s ease-out 0.6s both",
+  },
+  buttonGroup: {
+    display: "flex",
+    gap: "15px",
+    flexWrap: "wrap",
+    marginTop: "20px",
+    justifyContent: "center",
+    animation: "fadeInUp 0.8s ease-out 0.6s both",
+    width: "100%",
   },
   heroImage: {
     flex: 1,
@@ -757,6 +739,107 @@ const styles = {
     borderRadius: "6px",
     fontSize: "1rem",
     fontWeight: "700",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+  },
+  whyChooseSection: {
+    padding: "clamp(40px, 8vw, 80px) 20px",
+    maxWidth: "1400px",
+    margin: "0 auto",
+    textAlign: "center",
+  },
+  whyChooseTitle: {
+    fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+    fontWeight: "700",
+    marginBottom: "50px",
+    color: "#1f2937",
+  },
+  whyChooseContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: "30px",
+  },
+  whyChooseCard: {
+    padding: "30px",
+    backgroundColor: "#f9fafb",
+    borderRadius: "12px",
+    transition: "all 0.3s ease",
+    cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
+  },
+  whyChooseIcon: {
+    fontSize: "3rem",
+    marginBottom: "15px",
+  },
+  whyChooseCardTitle: {
+    fontSize: "1.2rem",
+    fontWeight: "700",
+    marginBottom: "10px",
+    color: "#1f2937",
+  },
+  whyChooseCardText: {
+    fontSize: "0.95rem",
+    color: "#6b7280",
+    lineHeight: "1.6",
+  },
+  statisticsSection: {
+    backgroundColor: "#3B82F6",
+    color: "#fff",
+    width: "100%",
+    marginLeft: "-20px",
+    marginRight: "-20px",
+    padding: "clamp(40px, 8vw, 80px) 20px",
+  },
+  statisticsContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "30px",
+    textAlign: "center",
+    maxWidth: "1400px",
+    margin: "0 auto",
+  },
+  statisticCard: {
+    padding: "30px 20px",
+  },
+  statisticNumber: {
+    fontSize: "clamp(2rem, 6vw, 3.5rem)",
+    fontWeight: "700",
+    marginBottom: "10px",
+  },
+  statisticLabel: {
+    fontSize: "1rem",
+    fontWeight: "500",
+  },
+  readyToBookSection: {
+    padding: "clamp(40px, 8vw, 80px) 20px",
+    maxWidth: "1400px",
+    margin: "0 auto",
+    textAlign: "center",
+  },
+  readyToBookContent: {
+    padding: "40px",
+    borderRadius: "12px",
+  },
+  readyToBookTitle: {
+    fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+    fontWeight: "700",
+    marginBottom: "15px",
+    color: "#1f2937",
+  },
+  readyToBookText: {
+    fontSize: "1rem",
+    color: "#6b7280",
+    marginBottom: "30px",
+    lineHeight: "1.6",
+  },
+  readyToBookButton: {
+    padding: "12px 30px",
+    background: "#3B82F6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "1rem",
+    fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.3s ease",
   },
