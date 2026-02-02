@@ -6,15 +6,15 @@ const scheduleController = require("../../controllers/scheduleController");
 const authMiddleware = require("../../middleware/authMiddleware");
 
 // User routes
-router.post("/register", userController.register);
-router.post("/login", userController.login);
+router.post("/register", userController.registerUser);
+router.post("/login", userController.loginUser);
 router.post("/logout", authMiddleware, userController.logout);
 router.get("/profile", authMiddleware, userController.getProfile);
 router.put("/profile", authMiddleware, userController.updateProfile);
 router.post("/change-password", authMiddleware, userController.changePassword);
 router.post("/request-password-reset", userController.requestPasswordReset);
 router.post("/reset-password", userController.resetPassword);
-router.post("/verify-email", userController.verifyEmail);
+router.post("/verify-recaptcha", userController.verifyRecaptcha);
 
 // Doctor routes
 router.get("/doctors", doctorController.getAllDoctors);

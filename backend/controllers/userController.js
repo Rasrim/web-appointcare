@@ -2,16 +2,30 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../config/database');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../config/email');
+const { verifyRecaptchaToken } = require('../config/recaptcha');
 
 const registerUser = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { fullName, email, password, phoneNumber, birthDate } = req.body;
+    const { fullName, email, password, phoneNumber, birthDate, recaptchaToken } = req.body;
 
     // Validate input
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Verify reCAPTCHA token
+    if (!recaptchaToken) {
+      return res.status(400).json({ message: 'reCAPTCHA verification required' });
+    }
+
+    const recaptchaResult = await verifyRecaptchaToken(recaptchaToken);
+    
+    if (!recaptchaResult.verified) {
+      return res.status(400).json({ 
+        message: 'reCAPTCHA verification failed. Please try again.',
+        error: recaptchaResult.error 
+      });
     }
 
     // Check if email already exists
@@ -20,33 +34,27 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Store user with verification code (not verified yet)
+    // Store user as verified (reCAPTCHA verified user)
     const result = await client.query(
-      'INSERT INTO users (full_name, email, password, phone_number, birth_date, verification_code, verification_code_expiry, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, email, full_name',
-      [fullName, email, hashedPassword, phoneNumber, birthDate, verificationCode, verificationCodeExpiry, false]
+      'INSERT INTO users (full_name, email, password, phone_number, birth_date, is_verified) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, full_name',
+      [fullName, email, hashedPassword, phoneNumber, birthDate, true]
     );
 
     const user = result.rows[0];
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, verificationCode);
-    } catch (emailError) {
-      console.error('Failed to send verification email, but user was created:', emailError);
-      // Don't return error - user is already created, we'll let them request code resend
-    }
+    // Generate JWT token
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET || 'secret', {
+      expiresIn: '7d',
+    });
 
     res.status(201).json({
-      message: 'User registered. Please check your email for verification code.',
+      message: 'User registered successfully with reCAPTCHA verification!',
       user: { id: user.id, email: user.email, fullName: user.full_name },
-      requiresVerification: true,
+      token,
+      verified: true,
     });
   } catch (err) {
     console.error('Registration error:', err);
@@ -253,115 +261,38 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
-const verifyEmail = async (req, res) => {
-  const client = await pool.connect();
+const verifyRecaptcha = async (req, res) => {
   try {
-    const { email, verificationCode } = req.body;
+    const { recaptchaToken } = req.body;
 
-    if (!email || !verificationCode) {
-      return res.status(400).json({ message: 'Email and verification code required' });
+    if (!recaptchaToken) {
+      return res.status(400).json({ message: 'reCAPTCHA token required' });
     }
 
-    // Find user by email
-    const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+    const recaptchaResult = await verifyRecaptchaToken(recaptchaToken);
+    
+    if (!recaptchaResult.verified) {
+      return res.status(400).json({ 
+        message: 'reCAPTCHA verification failed',
+        error: recaptchaResult.error 
+      });
     }
-
-    const user = result.rows[0];
-
-    // Check if email is already verified
-    if (user.is_verified) {
-      return res.status(400).json({ message: 'Email already verified' });
-    }
-
-    // Check if verification code is correct
-    if (user.verification_code !== verificationCode) {
-      return res.status(400).json({ message: 'Invalid verification code' });
-    }
-
-    // Check if code has expired
-    if (new Date() > new Date(user.verification_code_expiry)) {
-      return res.status(400).json({ message: 'Verification code has expired' });
-    }
-
-    // Mark user as verified
-    await client.query(
-      'UPDATE users SET is_verified = true, verification_code = NULL, verification_code_expiry = NULL WHERE id = $1',
-      [user.id]
-    );
-
-    // Generate JWT token
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET || 'secret', {
-      expiresIn: '7d',
-    });
 
     res.status(200).json({
-      message: 'Email verified successfully',
-      user: { id: user.id, email: user.email, fullName: user.full_name },
-      token,
+      message: 'reCAPTCHA verified successfully',
+      verified: true,
+      score: recaptchaResult.score,
     });
   } catch (err) {
-    console.error('Verification error:', err);
-    res.status(500).json({ message: 'Server error during verification' });
-  } finally {
-    client.release();
+    console.error('reCAPTCHA verification error:', err);
+    res.status(500).json({ message: 'Server error during reCAPTCHA verification' });
   }
 };
 
 const resendVerificationCode = async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: 'Email required' });
-    }
-
-    // Find user by email
-    const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const user = result.rows[0];
-
-    // Check if already verified
-    if (user.is_verified) {
-      return res.status(400).json({ message: 'Email already verified' });
-    }
-
-    // Generate new verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000);
-
-    // Update verification code
-    await client.query(
-      'UPDATE users SET verification_code = $1, verification_code_expiry = $2 WHERE id = $3',
-      [verificationCode, verificationCodeExpiry, user.id]
-    );
-
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, verificationCode);
-      res.status(200).json({
-        message: 'New verification code sent to your email',
-      });
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Still return success since code was updated in database
-      res.status(200).json({
-        message: 'Verification code updated. Please check your email. If you don\'t receive it, please try again.',
-      });
-    }
-  } catch (err) {
-    console.error('Resend verification error:', err);
-    res.status(500).json({ message: 'Server error' });
-  } finally {
-    client.release();
-  }
+  return res.status(410).json({ 
+    message: 'Email verification is no longer used. reCAPTCHA verification is required instead.',
+  });
 };
 
-module.exports = { registerUser, loginUser, forgotPassword, resetPassword, getUserProfile, updateUserProfile, verifyEmail, resendVerificationCode };
+module.exports = { registerUser, loginUser, forgotPassword, resetPassword, getUserProfile, updateUserProfile, verifyRecaptcha, resendVerificationCode };
