@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { API_URL } from "../../utils/api";
 import { Link, useNavigate } from "react-router-dom";
 import { AiOutlineArrowLeft } from "react-icons/ai";
 import { forgotPasswordSchema } from "./schema/forgot-password.schema";
@@ -40,7 +41,7 @@ const ForgotPassword = () => {
     setServerError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/forgot-password", {
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -179,44 +180,39 @@ const styles = {
     padding: "20px",
     boxSizing: "border-box",
     overflow: "hidden",
+    "@media (maxWidth: 768px)": {
+      display: "none",
+    },
   },
   brandingContent: {
     textAlign: "center",
     color: "#fff",
     overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
   },
   brandTitle: {
     fontSize: "clamp(2rem, 8vw, 3.5rem)",
     fontWeight: "700",
     color: "#fff",
-    margin: "0 0 60px 0",
+    margin: "100px 0 50px 0",
   },
   featuresContainer: {
     marginBottom: "40px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-    width: "100%",
-    maxWidth: "500px",
+    maxHeight: "400px",
+    overflowY: "auto",
   },
   featureItem: {
     display: "flex",
     alignItems: "center",
-    gap: "20px",
-    padding: "20px 25px",
-    background: "rgba(0, 0, 0, 0.25)",
-    borderRadius: "12px",
+    gap: "15px",
+    marginBottom: "15px",
+    background: "rgba(255, 255, 255, 0.2)",
+    padding: "12px 18px",
+    borderRadius: "8px",
     backdropFilter: "blur(10px)",
   },
   featureIcon: {
-    fontSize: "clamp(2rem, 5vw, 2.5rem)",
+    fontSize: "clamp(1.5rem, 5vw, 2rem)",
     flexShrink: 0,
-    minWidth: "50px",
   },
   featureText: {
     textAlign: "left",
@@ -225,10 +221,8 @@ const styles = {
     color: "#fff",
   },
   doctorsImage: {
-    marginTop: "20px",
-    height: "350px",
-    width: "100%",
-    maxWidth: "450px",
+    marginTop: "10px",
+    height: "400px",
     overflow: "hidden",
     display: "flex",
     alignItems: "center",

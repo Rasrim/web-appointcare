@@ -1,12 +1,10 @@
-/* login.jsx */
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-import { MdEmail, MdLock, MdCheckCircle } from "react-icons/md";
 import { loginSchema } from "./schema/login.schema";
+import { API_URL } from "../../utils/api";
 import doctorImage from "../../images/docter1.png";
 
 const Login = () => {
@@ -83,7 +81,7 @@ const Login = () => {
     setServerError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -115,6 +113,26 @@ const Login = () => {
         // Store phone number
         if (responseData.user && responseData.user.phoneNumber) {
           localStorage.setItem("userPhoneNumber", responseData.user.phoneNumber);
+        }
+        // Store location
+        if (responseData.user && responseData.user.location) {
+          localStorage.setItem("location", responseData.user.location);
+        }
+        // Store date of birth
+        if (responseData.user && responseData.user.dateOfBirth) {
+          localStorage.setItem("dateOfBirth", responseData.user.dateOfBirth);
+        }
+        // Store gender
+        if (responseData.user && responseData.user.gender) {
+          localStorage.setItem("gender", responseData.user.gender);
+        }
+        // Store bio
+        if (responseData.user && responseData.user.bio) {
+          localStorage.setItem("bio", responseData.user.bio);
+        }
+        // Store profile image
+        if (responseData.user && responseData.user.profileImage) {
+          localStorage.setItem("profileImage", responseData.user.profileImage);
         }
         if (responseData.isAdmin) {
           localStorage.setItem("isAdmin", "true");
@@ -299,8 +317,6 @@ const styles = {
   container: {
     height: "100vh",
     width: "100%",
-    maxWidth: "1400px",
-    margin: "0 auto",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -398,10 +414,12 @@ const styles = {
   },
   formContainer: {
     width: "100%",
-    maxWidth: window.innerWidth < 768 ? "100%" : "420px",
+    maxWidth: "420px",
+    padding: "clamp(20px, 4vw, 30px)",
+    boxSizing: "border-box",
   },
   title: {
-    fontSize: window.innerWidth < 768 ? "1.5rem" : "2rem",
+    fontSize: "clamp(1.3rem, 4vw, 2rem)",
     fontWeight: "700",
     color: "#1a1a1a",
     margin: "0 0 8px 0",
@@ -489,13 +507,14 @@ const styles = {
     gap: "10px",
   },
   checkbox: {
-    marginRight: "8px",
+    marginRight: "4px",
     cursor: "pointer",
   },
   checkboxLabel: {
     color: "#333",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    marginRight: "auto",
   },
   forgotPassword: {
     color: "#3B82F6",

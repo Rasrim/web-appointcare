@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MdLogout, MdAdd, MdEdit, MdDelete, MdArrowBack } from "react-icons/md";
+import { API_URL } from "../../utils/api";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [activeTab, setActiveTab] = useState("doctors");
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -46,9 +48,14 @@ const AdminDashboard = () => {
     fetchDoctors();
   }, []);
 
+  // Fetch appointments
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
   const fetchDoctors = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/doctors");
+      const response = await fetch(`${API_URL}/api/doctors`);
       if (response.ok) {
         const data = await response.json();
         setDoctors(data);
@@ -56,6 +63,27 @@ const AdminDashboard = () => {
     } catch {
       setError("Failed to fetch doctors");
     }
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/appointments/admin/all`);
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data);
+      }
+    } catch {
+      setError("Failed to fetch appointments");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminEmail");
+    localStorage.removeItem("isAdmin");
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("fullName");
+    navigate("/login");
   };
 
   const handleInputChange = (e) => {
@@ -118,8 +146,8 @@ const AdminDashboard = () => {
 
     try {
       const url = editingId
-        ? `http://localhost:3000/api/doctors/${editingId}`
-        : "http://localhost:3000/api/doctors";
+        ? `${API_URL}/api/doctors/${editingId}`
+        : `${API_URL}/api/doctors`;
       const method = editingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -169,7 +197,7 @@ const AdminDashboard = () => {
     if (window.confirm("Are you sure you want to delete this doctor?")) {
       try {
         const response = await fetch(
-          `http://localhost:3000/api/doctors/${doctorId}`,
+          `${API_URL}/api/doctors/${doctorId}`,
           { method: "DELETE" }
         );
         if (response.ok) {
@@ -222,22 +250,82 @@ const AdminDashboard = () => {
       {/* Header */}
       <header style={styles.header}>
         <h1 style={styles.title}>Admin Dashboard</h1>
-        <Link to="/" style={styles.logoutBtn}>
-          Back to Home
-        </Link>
+        <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+          <button 
+            onClick={handleLogout}
+            style={{
+              padding: "8px 16px",
+              background: "#ef4444",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              fontWeight: "600",
+              cursor: "pointer",
+              fontSize: "0.95rem"
+            }}
+          >
+            Logout
+          </button>
+          <Link to="/" style={styles.logoutBtn}>
+            Back to Home
+          </Link>
+        </div>
       </header>
+
+      {/* Tab Switcher */}
+      <div style={{
+        display: "flex",
+        gap: "10px",
+        padding: "20px 30px",
+        borderBottom: "2px solid #e5e7eb",
+        background: "#f9fafb"
+      }}>
+        <button 
+          onClick={() => setActiveTab("doctors")}
+          style={{
+            padding: "10px 20px",
+            background: activeTab === "doctors" ? "#3B82F6" : "#e5e7eb",
+            color: activeTab === "doctors" ? "#fff" : "#666",
+            border: "none",
+            borderRadius: "6px",
+            fontWeight: "600",
+            cursor: "pointer",
+            fontSize: "0.95rem"
+          }}
+        >
+          Manage Doctors
+        </button>
+        <button 
+          onClick={() => setActiveTab("appointments")}
+          style={{
+            padding: "10px 20px",
+            background: activeTab === "appointments" ? "#3B82F6" : "#e5e7eb",
+            color: activeTab === "appointments" ? "#fff" : "#666",
+            border: "none",
+            borderRadius: "6px",
+            fontWeight: "600",
+            cursor: "pointer",
+            fontSize: "0.95rem"
+          }}
+        >
+          View Bookings ({appointments.length})
+        </button>
+      </div>
 
       {/* Main Content */}
       <div style={styles.mainContent}>
-        <div style={styles.contentHeader}>
-          <h2 style={styles.contentTitle}>Manage Doctors</h2>
-          <button
-            style={styles.addButton}
-            onClick={() => setShowForm(!showForm)}
-          >
-            {showForm ? "Close Form" : "+ Add New Doctor"}
-          </button>
-        </div>
+        {/* Doctors Tab */}
+        {activeTab === "doctors" && (
+          <>
+            <div style={styles.contentHeader}>
+              <h2 style={styles.contentTitle}>Manage Doctors</h2>
+              <button
+                style={styles.addButton}
+                onClick={() => setShowForm(!showForm)}
+              >
+                {showForm ? "Close Form" : "+ Add New Doctor"}
+              </button>
+            </div>
 
         {message && <div style={styles.successMessage}>{message}</div>}
         {error && <div style={styles.errorMessage}>{error}</div>}
@@ -455,6 +543,147 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
+          </>
+        )}
+
+        {/* Appointments Tab */}
+        {activeTab === "appointments" && (
+          <>
+            <h2 style={styles.contentTitle}>View Bookings</h2>
+            {message && <div style={styles.successMessage}>{message}</div>}
+            {error && <div style={styles.errorMessage}>{error}</div>}
+
+            {appointments.length > 0 ? (
+              <div style={{ display: "grid", gap: "20px" }}>
+                {appointments.map((appointment, index) => (
+                  <div 
+                    key={appointment.id} 
+                    style={{
+                      background: "#fff",
+                      borderRadius: "8px",
+                      padding: "20px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                      borderLeft: "4px solid #3B82F6"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: "15px", flexWrap: "wrap" }}>
+                      <div>
+                        <h3 style={{ 
+                          margin: "0 0 15px 0", 
+                          color: "#3B82F6",
+                          fontSize: "1.1rem",
+                          fontWeight: "700"
+                        }}>
+                          Booking #{index + 1}
+                        </h3>
+                        
+                        <div style={{ 
+                          display: "grid", 
+                          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                          gap: "12px"
+                        }}>
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Patient Name</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.user_name}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Patient Email</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.user_email}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Patient Phone</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.phone_number}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Doctor</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.doctor_name}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Specialty</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.specialty}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Appointment Date</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {new Date(appointment.appointment_date).toLocaleDateString()}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Time</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.start_time}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Clinic</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {appointment.clinic}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Consultation Fee</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              ₹{appointment.fee}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p style={{ margin: "0 0 5px 0", color: "#999", fontSize: "0.85rem" }}>
+                              <strong>Booking Date</strong>
+                            </p>
+                            <p style={{ margin: 0, color: "#333", fontSize: "1rem" }}>
+                              {new Date(appointment.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={styles.noDoctorsMessage}>
+                <p>No bookings yet.</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "../utils/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const DoctorTimesheet = () => {
@@ -23,7 +24,7 @@ const DoctorTimesheet = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/doctors");
+      const response = await fetch(`${API_URL}/api/doctors`);
       if (response.ok) {
         const data = await response.json();
         setDoctors(data);
@@ -37,7 +38,7 @@ const DoctorTimesheet = () => {
   const fetchSchedule = async (doctorId, month, year) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/schedule/doctor/${doctorId}?month=${month}&year=${year}`
+        `${API_URL}/api/schedule/doctor/${doctorId}?month=${month}&year=${year}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -87,7 +88,7 @@ const DoctorTimesheet = () => {
         selectedDate
       );
 
-      const response = await fetch("http://localhost:3000/api/schedule", {
+      const response = await fetch(`${API_URL}/api/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -11,6 +11,13 @@ const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/Admin/AdminDashboard'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const SymptomDetail = React.lazy(() => import('./pages/SymptomDetail'));
+const FAQ = React.lazy(() => import('./pages/public/FAQ'));
+const TermsAndConditions = React.lazy(() => import('./pages/public/TermsAndConditions'));
+const PrivacyPolicy = React.lazy(() => import('./pages/public/PrivacyPolicy'));
+const AboutUs = React.lazy(() => import('./pages/public/AboutUs'));
+const ContactUs = React.lazy(() => import('./pages/public/ContactUs'));
+const Blog = React.lazy(() => import('./pages/public/Blog'));
+const Support = React.lazy(() => import('./pages/public/Support'));
 
 function App() {
   return (
@@ -26,6 +33,13 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/symptom/:symptomName" element={<SymptomDetail />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/support" element={<Support />} />
       </Routes>
       </Suspense>
     </>

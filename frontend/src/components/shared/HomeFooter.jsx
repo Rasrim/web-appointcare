@@ -1,4 +1,4 @@
-import logoImage from "../images/AppointCarenobg.png";
+import logoImage from "../../images/AppointCarenobg.png";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 

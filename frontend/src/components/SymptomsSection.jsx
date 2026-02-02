@@ -125,8 +125,11 @@ const SymptomsSection = () => {
     alignItems: "center",
     justifyContent: "center",
     gap: "20px",
-    flexWrap: "nowrap", 
-},
+    flexWrap: "nowrap",
+    position: "relative",
+    maxWidth: "1000px",
+    margin: "0 auto",
+  },
 
     sliderButton: {
       backgroundColor: "#4b7bff",
@@ -143,6 +146,7 @@ const SymptomsSection = () => {
       transition: "all 0.3s ease",
       boxShadow: "0 4px 12px rgba(75, 123, 255, 0.3)",
       flexShrink: 0,
+      position: "absolute",
     },
     sliderButtonHover: {
       backgroundColor: "#3a62d9",
@@ -161,8 +165,13 @@ symptomCard: {
   borderRadius: "12px",
   padding: "25px 20px",
   textAlign: "center",
-  minWidth: "120px",
-  flexShrink: 0, // ✅ ADD THIS LINE
+  width: "140px",
+  height: "140px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
   boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
   transition: "all 0.3s ease",
   cursor: "pointer",

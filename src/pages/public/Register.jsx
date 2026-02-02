@@ -3,9 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-import { MdEmail, MdLock, MdPerson, MdPhone, MdCheckCircle } from "react-icons/md";
 import { registerSchema } from "./schema/register.schema";
+import { API_URL } from "../../utils/api";
 import VerificationCodeInput from "../../components/VerificationCodeInput";
+import TermsAndConditions from "../../components/TermsAndConditions";
 import doctorImage from "../../images/docter1.png";
 
 const Register = () => {
@@ -17,9 +18,11 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [countryCode, setCountryCode] = useState("+977");
+  const [selectedGender, setSelectedGender] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [serverError, setServerError] = useState("");
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [passwordRequirements, setPasswordRequirements] = useState({
     minLength: false,
     hasCapital: false,
@@ -40,9 +43,11 @@ const Register = () => {
       fullName: "",
       email: "",
       phoneNumber: "",
+      gender: "",
       password: "",
       confirmPassword: "",
       birthDate: "",
+      agreeToTerms: false,
     },
   });
 
@@ -83,7 +88,7 @@ const Register = () => {
     setServerError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/register", {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -93,6 +98,7 @@ const Register = () => {
           email: data.email,
           password: data.password,
           phoneNumber: `${countryCode}${data.phoneNumber}`,
+          gender: selectedGender,
           birthDate: data.birthDate,
         }),
       });
@@ -125,7 +131,7 @@ const Register = () => {
     setServerError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/verify-email", {
+      const response = await fetch(`${API_URL}/api/auth/verify-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,7 +168,7 @@ const Register = () => {
     setServerError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/resend-verification", {
+      const response = await fetch(`${API_URL}/api/auth/resend-verification`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -189,38 +195,39 @@ const Register = () => {
   return (
     <div style={styles.container}>
       {/* Left Side - Branding - Hidden on Mobile */}
-      {!isMobile && (
-        <div style={styles.brandingSection}>
-          <div style={styles.brandingContent}>
-            <h1 style={styles.brandTitle}>AppointCare</h1>
-            <div style={styles.featuresContainer}>
-              <div style={styles.featureItem}>
-                <span style={styles.featureIcon}>🔍</span>
-                <p style={styles.featureText}>
-                  <strong>Well qualified doctors</strong>
-                  <br />
-                  <small>Treat with utmost care</small>
-                </p>
-              </div>
-              <div style={styles.featureItem}>
-                <span style={styles.featureIcon}>📅</span>
-                <p style={styles.featureText}>
-                  <strong>Book an appointment</strong>
-                  <br />
-                  <small>Book and visit doctor easily</small>
-                </p>
-              </div>
-            </div>
-            <div style={styles.doctorsImage}>
-              <img 
-                src={doctorImage} 
-                alt="Doctors" 
-                style={styles.doctorImageTag}
-              />
-            </div>
-          </div>
+{!isMobile && (
+  <div style={styles.brandingSection}>
+    <div style={styles.brandingContent}>
+      <h1 style={styles.brandTitle}>AppointCare</h1>
+
+      <div style={styles.featuresContainer}>
+        <div style={styles.featureItem}>
+          <span style={styles.featureIcon}>🔍</span>
+          <p style={styles.featureText}>
+            <strong>Well qualified doctors</strong><br />
+            <small>Treat with utmost care</small>
+          </p>
         </div>
-      )}
+
+        <div style={styles.featureItem}>
+          <span style={styles.featureIcon}>📅</span>
+          <p style={styles.featureText}>
+            <strong>Book an appointment</strong><br />
+            <small>Book and visit doctor easily</small>
+          </p>
+        </div>
+      </div>
+
+      <div style={styles.doctorsImage}>
+        <img
+          src={doctorImage}
+          alt="Doctors"
+          style={styles.doctorImageTag}
+        />
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Right Side - Register Form */}
       <div style={styles.formSection}>
@@ -309,6 +316,51 @@ const Register = () => {
                     <span style={styles.validationIcon}>✓ Valid</span>
                   )}
                 </div>
+              )}
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Gender</label>
+              <div style={styles.genderContainer}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGender("Male")}
+                  style={{
+                    ...styles.genderButton,
+                    backgroundColor: selectedGender === "Male" ? "#3B82F6" : "#f0f0f0",
+                    color: selectedGender === "Male" ? "#fff" : "#333",
+                    borderColor: selectedGender === "Male" ? "#3B82F6" : "#ddd",
+                  }}
+                >
+                  👨 Male
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGender("Female")}
+                  style={{
+                    ...styles.genderButton,
+                    backgroundColor: selectedGender === "Female" ? "#3B82F6" : "#f0f0f0",
+                    color: selectedGender === "Female" ? "#fff" : "#333",
+                    borderColor: selectedGender === "Female" ? "#3B82F6" : "#ddd",
+                  }}
+                >
+                  👩 Female
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGender("Other")}
+                  style={{
+                    ...styles.genderButton,
+                    backgroundColor: selectedGender === "Other" ? "#3B82F6" : "#f0f0f0",
+                    color: selectedGender === "Other" ? "#fff" : "#333",
+                    borderColor: selectedGender === "Other" ? "#3B82F6" : "#ddd",
+                  }}
+                >
+                  🧑 Other
+                </button>
+              </div>
+              {errors.gender && (
+                <span style={styles.errorText}>{errors.gender.message}</span>
               )}
             </div>
 
@@ -406,6 +458,29 @@ const Register = () => {
               )}
             </div>
 
+            <div style={styles.termsContainer}>
+              <label style={styles.termsLabel}>
+                <input
+                  type="checkbox"
+                  {...register("agreeToTerms")}
+                  style={styles.termsCheckbox}
+                />
+                <span style={styles.termsText}>
+                  I agree to the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    style={styles.termsLink}
+                  >
+                    Terms and Conditions
+                  </button>
+                </span>
+              </label>
+              {errors.agreeToTerms && (
+                <span style={styles.errorText}>{errors.agreeToTerms.message}</span>
+              )}
+            </div>
+
             <button 
               type="submit" 
               style={{
@@ -475,6 +550,11 @@ const Register = () => {
           )}
         </div>
       </div>
+
+      <TermsAndConditions 
+        isOpen={showTermsModal} 
+        onClose={() => setShowTermsModal(false)} 
+      />
     </div>
   );
 };
@@ -483,8 +563,6 @@ const styles = {
   container: {
     height: "100vh",
     width: "100%",
-    maxWidth: "1400px",
-    margin: "0 auto",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -510,21 +588,18 @@ const styles = {
   brandingContent: {
     textAlign: "center",
     color: "#fff",
-    overflow: "visible",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    height: "100%",
+    overflow: "hidden",
   },
   brandTitle: {
     fontSize: "clamp(2rem, 8vw, 3.5rem)",
     fontWeight: "700",
     color: "#fff",
-    margin: "40px 0 30px 0",
+    margin: "100px 0 50px 0",
   },
   featuresContainer: {
-    marginBottom: "20px",
+    marginBottom: "40px",
+    maxHeight: "400px",
+    overflowY: "auto",
   },
   featureItem: {
     display: "flex",
@@ -547,20 +622,19 @@ const styles = {
     color: "#fff",
   },
   doctorsImage: {
-    marginTop: "auto",
-    height: "100%",
-    flex: 1,
+    marginTop: "10px",
+    height: "400px",
     overflow: "hidden",
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "center",
-    width: "100%",
   },
   doctorImageTag: {
     width: "100%",
     height: "100%",
     objectFit: "contain",
   },
+
   formSection: {
     flex: window.innerWidth < 768 ? "none" : 1,
     width: window.innerWidth < 768 ? "100%" : "auto",
@@ -589,13 +663,15 @@ const styles = {
   },
   formContainer: {
     width: "100%",
-    maxWidth: window.innerWidth < 768 ? "100%" : "420px",
-    maxHeight: window.innerWidth < 768 ? "none" : "95vh",
-    overflowY: window.innerWidth < 768 ? "visible" : "auto",
-    paddingRight: window.innerWidth < 768 ? "0" : "8px",
+    maxWidth: "420px",
+    maxHeight: "95vh",
+    overflowY: "auto",
+    paddingRight: "8px",
+    padding: "clamp(20px, 4vw, 30px)",
+    boxSizing: "border-box",
   },
   title: {
-    fontSize: window.innerWidth < 768 ? "1.5rem" : "2rem",
+    fontSize: "clamp(1.3rem, 4vw, 2rem)",
     fontWeight: "700",
     color: "#1a1a1a",
     margin: "0 0 8px 0",
@@ -662,6 +738,25 @@ const styles = {
     fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
     boxSizing: "border-box",
   },
+  genderContainer: {
+    display: "flex",
+    gap: "12px",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+  },
+  genderButton: {
+    flex: 1,
+    minWidth: "90px",
+    padding: "12px 16px",
+    border: "2px solid #ddd",
+    borderRadius: "6px",
+    backgroundColor: "#f0f0f0",
+    color: "#333",
+    fontSize: "0.9rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+  },
   passwordContainer: {
     position: "relative",
     display: "flex",
@@ -696,6 +791,37 @@ const styles = {
     cursor: "pointer",
     marginTop: "15px",
     transition: "background-color 0.3s",
+  },
+  termsContainer: {
+    marginBottom: "clamp(12px, 3vw, 18px)",
+  },
+  termsLabel: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "10px",
+    cursor: "pointer",
+  },
+  termsCheckbox: {
+    marginTop: "4px",
+    cursor: "pointer",
+    minWidth: "18px",
+    minHeight: "18px",
+  },
+  termsText: {
+    fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
+    color: "#333",
+    lineHeight: "1.4",
+  },
+  termsLink: {
+    background: "none",
+    border: "none",
+    color: "#3B82F6",
+    cursor: "pointer",
+    fontWeight: "600",
+    textDecoration: "underline",
+    padding: "0",
+    fontSize: "inherit",
+    transition: "color 0.3s",
   },
   checkboxContainer: {
     display: "flex",

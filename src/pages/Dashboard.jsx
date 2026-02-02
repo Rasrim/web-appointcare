@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../utils/api";
 import doctorImage from "./../images/docter1.png";
 import logoImage from "./../images/AppointCarenobg.png";
 import { translations } from "../utils/translations";
 import SymptomsSection from "../components/SymptomsSection";
-import { MdDashboard, MdAssignmentInd, MdCalendarToday, MdHelp, MdLogout, MdSearch, MdDownload, MdClose } from "react-icons/md";
-import { FaUser } from "react-icons/fa";
 
 const Dashboard = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -20,7 +19,7 @@ const Dashboard = () => {
   });
   const [doctors, setDoctors] = useState([]);
   const [appointments, setAppointments] = useState([]);
-  const [activeMenu, setActiveMenu] = useState("appointments");
+  const [activeMenu, setActiveMenu] = useState("dashboard");
   const [doctorsLoading, setDoctorsLoading] = useState(true);
   const [doctorsError, setDoctorsError] = useState(null);
   const navigate = useNavigate();
@@ -38,7 +37,6 @@ const Dashboard = () => {
     "04:00 PM",
   ];
   const [bookedAppointmentMessage, setBookedAppointmentMessage] = useState("");
-  const [selectedAppointmentDetail, setSelectedAppointmentDetail] = useState(null);
 
   useEffect(() => {
     // Check if token exists on mount
@@ -96,7 +94,7 @@ const Dashboard = () => {
       try {
         setDoctorsLoading(true);
         setDoctorsError(null);
-        const response = await fetch("http://localhost:3000/api/doctors");
+        const response = await fetch(`${API_URL}/api/doctors`);
         if (response.ok) {
           const data = await response.json();
           setDoctors(data);
@@ -196,104 +194,8 @@ const Dashboard = () => {
     }
     return days;
   };
+
   const nextDays = getNextDays();
-
-  const handleDownloadPDF = () => {
-    if (!selectedAppointmentDetail) return;
-
-    const apt = selectedAppointmentDetail;
-    const bookingDate = new Date(apt.bookedAt).toLocaleDateString();
-    
-    // Create PDF content as HTML
-    const pdfContent = `
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3B82F6; padding-bottom: 15px; }
-            .title { font-size: 24px; font-weight: bold; color: #3B82F6; margin: 0; }
-            .section { margin-bottom: 25px; }
-            .section-title { font-size: 16px; font-weight: bold; color: #3B82F6; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-            .detail-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-            .label { font-weight: bold; min-width: 150px; }
-            .value { text-align: right; }
-            .footer { text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; font-size: 12px; color: #999; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <p class="title">AppointCare Appointments</p>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Patient's Details</div>
-            <div class="detail-row">
-              <span class="label">Name:</span>
-              <span class="value">${user.fullName}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Email:</span>
-              <span class="value">${user.email}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Phone:</span>
-              <span class="value">${user.phoneNumber}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Doctor's Details</div>
-            <div class="detail-row">
-              <span class="label">Name:</span>
-              <span class="value">Dr. ${apt.doctorName}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Specialty:</span>
-              <span class="value">${apt.specialty}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Appointment Details</div>
-            <div class="detail-row">
-              <span class="label">Appointment Status:</span>
-              <span class="value">${apt.status || "Scheduled"}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Date of Booking:</span>
-              <span class="value">${bookingDate}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Date of Appointment:</span>
-              <span class="value">${apt.date}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Appointment Time:</span>
-              <span class="value">${apt.time}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="detail-row">
-              <span class="label" style="font-size: 16px;">Total Amount:</span>
-              <span class="value" style="font-size: 16px; font-weight: bold; color: #3B82F6;">₹${apt.fee}</span>
-            </div>
-          </div>
-
-          <div class="footer">
-            <p>Please visit the hospital on the scheduled date and time with this document.</p>
-            <p>© 2024 AppointCare. All rights reserved.</p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    // Create a new window and print to PDF
-    const printWindow = window.open("", "PRINT", "height=600,width=800");
-    printWindow.document.write(pdfContent);
-    printWindow.document.close();
-    printWindow.print();
-  };
 
   const styles = {
     container: { display: "flex", width: "100%", minHeight: "100vh", background: "#f9f9f9", flexDirection: isMobile ? "column" : "row" },
@@ -394,20 +296,7 @@ const Dashboard = () => {
     footerBottom: { textAlign: "center", paddingTop: "20px", borderTop: "1px solid #eee" },
     footerText: { fontSize: "0.85rem", color: "#999", margin: 0 },
     mobileMenu: { position: "fixed", bottom: "20px", right: "20px", zIndex: 100 },
-    menuBtn: { width: "56px", height: "56px", background: "#3B82F6", color: "#fff", border: "none", borderRadius: "50%", fontSize: "1.5rem", cursor: "pointer", boxShadow: "0 2px 12px rgba(59, 130, 246, 0.3)" },
-    modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: selectedAppointmentDetail ? "flex" : "none", alignItems: "center", justifyContent: "center", zIndex: 1000 },
-    modalContent: { background: "#fff", borderRadius: "12px", padding: "40px", maxWidth: "700px", width: "90%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 10px 40px rgba(0,0,0,0.3)" },
-    modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", borderBottom: "2px solid #3B82F6", paddingBottom: "15px" },
-    modalTitle: { fontSize: "1.8rem", fontWeight: "700", color: "#1a1a1a", margin: 0 },
-    modalCloseBtn: { background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#999" },
-    detailSection: { marginBottom: "25px" },
-    detailSectionTitle: { fontSize: "1.2rem", fontWeight: "700", color: "#3B82F6", marginBottom: "15px", borderBottom: "1px solid #eee", paddingBottom: "10px" },
-    detailRow: { display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "0.95rem" },
-    detailLabel: { fontWeight: "600", color: "#666", minWidth: "150px" },
-    detailValue: { color: "#1a1a1a", textAlign: "right", flex: 1 },
-    modalButtonGroup: { display: "flex", gap: "15px", marginTop: "30px", justifyContent: "flex-end" },
-    downloadPdfBtn: { padding: "12px 24px", background: "#3B82F6", color: "#fff", border: "none", borderRadius: "6px", fontSize: "1rem", fontWeight: "600", cursor: "pointer", transition: "all 0.3s ease" },
-    closeModalBtn: { padding: "12px 24px", background: "#f0f0f0", color: "#666", border: "1px solid #ddd", borderRadius: "6px", fontSize: "1rem", fontWeight: "600", cursor: "pointer", transition: "all 0.3s ease" }
+    menuBtn: { width: "56px", height: "56px", background: "#3B82F6", color: "#fff", border: "none", borderRadius: "50%", fontSize: "1.5rem", cursor: "pointer", boxShadow: "0 2px 12px rgba(59, 130, 246, 0.3)" }
   };
 
   return (
@@ -425,57 +314,45 @@ const Dashboard = () => {
               ...styles.navItem,
               background: activeMenu === "dashboard" ? "#3B82F6" : "transparent",
               color: activeMenu === "dashboard" ? "#fff" : "#666",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
             }}
             onClick={() => setActiveMenu("dashboard")}
           >
-            <MdDashboard size={20} /> {t.dashboard}
-          </button>
-          <button
-            style={{
-              ...styles.navItem,
-              background: activeMenu === "appointments" ? "#3B82F6" : "transparent",
-              color: activeMenu === "appointments" ? "#fff" : "#666",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-            onClick={() => setActiveMenu("appointments")}
-          >
-            <MdAssignmentInd size={20} /> My Appointments
+            📊 {t.dashboard}
           </button>
           <button
             style={{
               ...styles.navItem,
               background: activeMenu === "calendar" ? "#3B82F6" : "transparent",
               color: activeMenu === "calendar" ? "#fff" : "#666",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
             }}
             onClick={() => setActiveMenu("calendar")}
           >
-            <MdCalendarToday size={20} /> {t.calendar}
+            📅 {t.calendar}
+          </button>
+          <button
+            style={{
+              ...styles.navItem,
+              background: activeMenu === "profile" ? "#3B82F6" : "transparent",
+              color: activeMenu === "profile" ? "#fff" : "#666",
+            }}
+            onClick={() => setActiveMenu("profile")}
+          >
+            👤 {t.profile}
           </button>
           <button
             style={{
               ...styles.navItem,
               background: activeMenu === "help" ? "#3B82F6" : "transparent",
               color: activeMenu === "help" ? "#fff" : "#666",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
             }}
             onClick={() => setActiveMenu("help")}
           >
-            <MdHelp size={20} /> {t.help}
+            ❓ {t.help}
           </button>
         </nav>
 
         <button style={styles.logoutBtn} onClick={handleLogout}>
-          <MdLogout size={18} style={{ marginRight: "6px" }} /> {t.logout}
+          🚪 {t.logout}
         </button>
       </aside>
 
@@ -495,9 +372,7 @@ const Dashboard = () => {
               placeholder={t.findDoctors}
               style={styles.searchInput}
             />
-            <button style={styles.searchBtn}>
-              <MdSearch size={20} />
-            </button>
+            <button style={styles.searchBtn}>{t.search}</button>
           </div>
           <div style={styles.userSection}>
             <select
@@ -512,67 +387,16 @@ const Dashboard = () => {
               style={{...styles.userProfile, cursor: "pointer"}}
               onClick={() => navigate("/profile")}
             >
-              <div style={styles.userAvatar}><FaUser size={20} /></div>
-              <span style={styles.userName}>{user.fullName}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={styles.userAvatar}>👤</div>
+                <span style={styles.userName}>{user.fullName}</span>
+              </div>
             </div>
           </div>
         </header>
 
         {/* Content Area */}
         <div style={styles.content}>
-          {activeMenu === "appointments" && (
-            <div style={styles.appointmentsSection}>
-              <h1 style={styles.sectionTitle}>
-                <MdAssignmentInd style={{display: "inline", marginRight: "8px"}} /> My Appointments
-              </h1>
-              <p style={{ color: "#999", marginBottom: "30px" }}>View all your booked appointments</p>
-
-              {appointments.length > 0 ? (
-                <div style={styles.appointmentsList}>
-                  {appointments.map((apt, index) => (
-                    <div 
-                      key={index} 
-                      style={{...styles.appointmentCard, cursor: "pointer"}}
-                      onClick={() => setSelectedAppointmentDetail(apt)}
-                    >
-                      <div style={styles.appointmentCardContent}>
-                        <div style={styles.appointmentIcon}><MdAssignmentInd size={28} color="#3B82F6" /></div>
-                        <div style={styles.appointmentDetails}>
-                          <p style={styles.appointmentDoctorName}>
-                            Dr. {apt.doctorName || "Doctor"}
-                          </p>
-                          <p style={styles.appointmentDateTime}>
-                            📅 {apt.date || "Pending"} | ⏰ {apt.time || "Pending"}
-                          </p>
-                          <p style={styles.appointmentSpecialty}>
-                            {apt.specialty || "General Consultation"}
-                          </p>
-                          <p style={{ fontSize: "0.85rem", color: "#666", marginTop: "8px" }}>
-                            Status: <span style={{ fontWeight: "600", color: apt.status === "completed" ? "#22c55e" : apt.status === "cancelled" ? "#ef4444" : "#3b82f6" }}>
-                              {apt.status || "Scheduled"}
-                            </span>
-                          </p>
-                        </div>
-                        <div style={styles.appointmentFee}>
-                          <p style={styles.feeLabel}>Consultation Fee</p>
-                          <p style={styles.feeAmount}>₹{apt.fee || "0"}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={styles.noAppointments}>
-                  <p style={{ fontSize: "2rem", marginBottom: "10px" }}>📭</p>
-                  <p style={styles.noAppointmentsText}>You don't have any appointments yet.</p>
-                  <p style={{ color: "#3B82F6", fontSize: "0.95rem", marginTop: "20px" }}>
-                    👉 Go to the <strong>Calendar</strong> tab to book your first appointment with a doctor.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
           {activeMenu === "dashboard" && (
             <>
               {/* Hero Banner */}
@@ -617,7 +441,7 @@ const Dashboard = () => {
                     {appointments.map((apt) => (
                       <div key={apt.id} style={styles.appointmentCard}>
                         <div style={styles.appointmentCardContent}>
-                          <div style={styles.appointmentIcon}><MdCalendarToday size={28} color="#3B82F6" /></div>
+                          <div style={styles.appointmentIcon}>📅</div>
                           <div style={styles.appointmentDetails}>
                             <p style={styles.appointmentDoctorName}>
                               Dr. {apt.doctorName}
@@ -892,6 +716,13 @@ const Dashboard = () => {
             </div>
           )}
 
+          {activeMenu === "profile" && (
+            <div style={styles.emptySection}>
+              <h2>{t.profileSettings}</h2>
+              <p>{t.comingSoon}</p>
+            </div>
+          )}
+
           {activeMenu === "help" && (
             <div style={styles.emptySection}>
               <h2>{t.helpSupport}</h2>
@@ -907,97 +738,6 @@ const Dashboard = () => {
           <button style={styles.menuBtn}>☰</button>
         </div>
       )}
-
-      {/* Appointment Detail Modal */}
-      <div style={styles.modalOverlay} onClick={() => setSelectedAppointmentDetail(null)}>
-        <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-          {selectedAppointmentDetail && (
-            <>
-              <div style={styles.modalHeader}>
-                <h2 style={styles.modalTitle}>AppointCare Appointments</h2>
-                <button 
-                  style={styles.modalCloseBtn}
-                  onClick={() => setSelectedAppointmentDetail(null)}
-                >
-                  <MdClose size={24} />
-                </button>
-              </div>
-
-              <div style={styles.detailSection}>
-                <h3 style={styles.detailSectionTitle}>Patient's Details</h3>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Name:</span>
-                  <span style={styles.detailValue}>{user.fullName}</span>
-                </div>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Email:</span>
-                  <span style={styles.detailValue}>{user.email}</span>
-                </div>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Phone:</span>
-                  <span style={styles.detailValue}>{user.phoneNumber}</span>
-                </div>
-              </div>
-
-              <div style={styles.detailSection}>
-                <h3 style={styles.detailSectionTitle}>Doctor's Details</h3>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Name:</span>
-                  <span style={styles.detailValue}>Dr. {selectedAppointmentDetail.doctorName}</span>
-                </div>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Specialty:</span>
-                  <span style={styles.detailValue}>{selectedAppointmentDetail.specialty}</span>
-                </div>
-              </div>
-
-              <div style={styles.detailSection}>
-                <h3 style={styles.detailSectionTitle}>Appointment Details</h3>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Appointment Status:</span>
-                  <span style={{...styles.detailValue, fontWeight: "600", color: selectedAppointmentDetail.status === "completed" ? "#22c55e" : selectedAppointmentDetail.status === "cancelled" ? "#ef4444" : "#3b82f6"}}>
-                    {selectedAppointmentDetail.status || "Scheduled"}
-                  </span>
-                </div>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Date of Booking:</span>
-                  <span style={styles.detailValue}>{new Date(selectedAppointmentDetail.bookedAt).toLocaleDateString()}</span>
-                </div>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Date of Appointment:</span>
-                  <span style={styles.detailValue}>{selectedAppointmentDetail.date}</span>
-                </div>
-                <div style={styles.detailRow}>
-                  <span style={styles.detailLabel}>Appointment Time:</span>
-                  <span style={styles.detailValue}>{selectedAppointmentDetail.time}</span>
-                </div>
-              </div>
-
-              <div style={{...styles.detailSection, borderTop: "2px solid #3B82F6", paddingTop: "20px"}}>
-                <div style={{...styles.detailRow, fontSize: "1.1rem"}}>
-                  <span style={{...styles.detailLabel, fontSize: "1.1rem"}}>Total Amount:</span>
-                  <span style={{...styles.detailValue, fontSize: "1.1rem", fontWeight: "700", color: "#3B82F6"}}>₹{selectedAppointmentDetail.fee}</span>
-                </div>
-              </div>
-
-              <div style={styles.modalButtonGroup}>
-                <button 
-                  style={styles.downloadPdfBtn}
-                  onClick={handleDownloadPDF}
-                >
-                  <MdDownload size={20} style={{marginRight: "8px"}} /> Download PDF
-                </button>
-                <button 
-                  style={styles.closeModalBtn}
-                  onClick={() => setSelectedAppointmentDetail(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

@@ -15,10 +15,17 @@ const Home = () => {
   const [fadeIn, setFadeIn] = useState(false);
   const [selectedDate, setSelectedDate] = useState(16); // Today is January 16
   const [selectedTime, setSelectedTime] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleNavLinkClick = () => {
     const element = document.getElementById("calendar");
     element?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSearchClick = () => {
+    if (searchQuery.trim()) {
+      navigate(`/all-doctors?search=${searchQuery}`);
+    }
   };
 
   // Fade in animation on mount
@@ -78,6 +85,22 @@ const Home = () => {
               </div>
               <span style={styles.doctorCountText}>+18 doctors are available</span>
             </div>
+            
+            {/* Search Bar */}
+            <div style={styles.searchBarContainer}>
+              <input
+                type="text"
+                placeholder="Search by doctor name or specialty..."
+                style={styles.searchInput}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') handleSearchClick();
+                }}
+              />
+              <button style={styles.searchButton} onClick={handleSearchClick}>Search</button>
+            </div>
+
             <button style={styles.ctaButton} onClick={() => document.getElementById("doctors").scrollIntoView({ behavior: "smooth" })}>Find doctors</button>
           </div>
 
@@ -381,6 +404,42 @@ const styles = {
       background: "#2563EB",
       boxShadow: "0 6px 16px rgba(59, 130, 246, 0.4)",
     },
+  },
+  searchBarContainer: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "20px",
+    marginBottom: "20px",
+    justifyContent: "center",
+    animation: "fadeInUp 0.8s ease-out 0.7s both",
+  },
+  searchInput: {
+    padding: "clamp(8px, 2vw, 12px) clamp(15px, 3vw, 20px)",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+    minWidth: "300px",
+    flex: 1,
+    maxWidth: "400px",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+    ":focus": {
+      outline: "none",
+      borderColor: "#3B82F6",
+      boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)",
+    },
+  },
+  searchButton: {
+    padding: "clamp(8px, 2vw, 12px) clamp(15px, 3vw, 24px)",
+    background: "#3B82F6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
   },
   heroImage: {
     flex: 1,

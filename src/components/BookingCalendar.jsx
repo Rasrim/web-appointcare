@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { API_URL } from "../utils/api";
 
 const BookingCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Get Nepal Standard Time (NST = UTC+5:45)
+  const getNepaliTime = () => {
+    const now = new Date();
+    // Convert to UTC first by removing the local timezone offset
+    const utcDate = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+    // Then add NST offset (5 hours 45 minutes = 5.75 hours)
+    const nepaliTime = new Date(utcDate.getTime() + 5 * 60 * 60 * 1000 + 45 * 60 * 1000);
+    return nepaliTime;
+  };
+
+  const [currentDate, setCurrentDate] = useState(getNepaliTime());
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [appointments, setAppointments] = useState([]);
@@ -21,7 +32,7 @@ const BookingCalendar = () => {
       const month = currentDate.getMonth() + 1;
       const year = currentDate.getFullYear();
       const response = await fetch(
-        `http://localhost:3000/api/appointments/user/${userId}?month=${month}&year=${year}`
+        `${API_URL}/api/appointments/user/${userId}?month=${month}&year=${year}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -45,7 +56,7 @@ const BookingCalendar = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/doctors");
+      const response = await fetch(`${API_URL}/api/doctors`);
       if (response.ok) {
         const data = await response.json();
         setDoctors(data);
@@ -62,7 +73,7 @@ const BookingCalendar = () => {
   const fetchAvailableSlots = async (doctorId, date) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/available-slots/${doctorId}?date=${date}`
+        `${API_URL}/api/available-slots/${doctorId}?date=${date}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -99,7 +110,7 @@ const BookingCalendar = () => {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/appointments/book", {
+      const response = await fetch(`${API_URL}/api/appointments/book`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -215,11 +226,12 @@ const BookingCalendar = () => {
           <div style={styles.calendarGrid}>
             {days.map((day, index) => {
               const appts = day ? getAppointmentsForDate(day) : [];
+              const nepaliNow = getNepaliTime();
               const isToday =
                 day &&
-                day === new Date().getDate() &&
-                currentDate.getMonth() === new Date().getMonth() &&
-                currentDate.getFullYear() === new Date().getFullYear();
+                day === nepaliNow.getDate() &&
+                currentDate.getMonth() === nepaliNow.getMonth() &&
+                currentDate.getFullYear() === nepaliNow.getFullYear();
 
               return (
                 <div
@@ -583,10 +595,13 @@ const styles = {
   modalContent: {
     background: "white",
     borderRadius: "12px",
-    padding: "30px",
+    padding: "clamp(20px, 4vw, 30px)",
     maxWidth: "500px",
-    width: "90%",
+    width: "90vw",
+    maxHeight: "90vh",
+    overflowY: "auto",
     boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+    boxSizing: "border-box",
   },
   modalHeader: {
     display: "flex",
@@ -595,6 +610,8 @@ const styles = {
     marginBottom: "20px",
     paddingBottom: "15px",
     borderBottom: "1px solid #eee",
+    flexWrap: "wrap",
+    gap: "10px",
   },
   closeBtn: {
     background: "none",
@@ -611,12 +628,12 @@ const styles = {
   },
   slotsContainer: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-    gap: "10px",
-    marginBottom: "20px",
-  },
-  slotButton: {
-    border: "2px solid #ddd",
+    gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
+    gap: "clamp(8px, 2vw, 10px)",
+    marginBottclamp(10px, 2vw, 12px)",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    fontSize: "clamp(0.8rem, 2vw, 0.9rem)d #ddd",
     borderRadius: "6px",
     padding: "12px",
     cursor: "pointer",

@@ -14,6 +14,9 @@ export const registerSchema = z
       .string()
       .min(1, "Phone number is required")
       .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+    gender: z
+      .string()
+      .min(1, "Gender is required"),
     password: z
       .string()
       .min(1, "Password is required")
@@ -30,6 +33,11 @@ export const registerSchema = z
       .optional()
       .refine((date) => !date || new Date(date) < new Date(), {
         message: "Birth date must be in the past",
+      }),
+    agreeToTerms: z
+      .boolean()
+      .refine((val) => val === true, {
+        message: "You must agree to the Terms and Conditions",
       }),
   })
   .refine((data) => data.password === data.confirmPassword, {

@@ -159,6 +159,16 @@ const HomeNavbar = ({ onBookAppointmentsClick }) => {
           >
             Calendar
           </button>
+          <button
+            onClick={() => {
+              if (isMobile) setShowMobileMenu(false);
+            }}
+            style={styles.navLink}
+            onMouseEnter={(e) => (e.target.style.color = styles.navLinkHover.color)}
+            onMouseLeave={(e) => (e.target.style.color = "#666")}
+          >
+            Online Recovery
+          </button>
           <Link 
             to="/login" 
             style={styles.loginBtn}

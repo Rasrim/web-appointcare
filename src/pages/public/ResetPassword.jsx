@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { API_URL } from "../../utils/api";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { resetPasswordSchema } from "./schema/reset-password.schema";
@@ -76,7 +77,7 @@ const ResetPassword = () => {
     setServerError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/reset-password", {
+      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

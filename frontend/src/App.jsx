@@ -18,6 +18,10 @@ const AboutUs = React.lazy(() => import('./pages/public/AboutUs'));
 const ContactUs = React.lazy(() => import('./pages/public/ContactUs'));
 const Blog = React.lazy(() => import('./pages/public/Blog'));
 const Support = React.lazy(() => import('./pages/public/Support'));
+const CookiesPage = React.lazy(() => import('./pages/public/CookiesPage'));
+const PolicyPage = React.lazy(() => import('./pages/public/PolicyPage'));
+const AllAppointments = React.lazy(() => import('./pages/AllAppointments'));
+const AllDoctors = React.lazy(() => import('./pages/AllDoctors'));
 
 function App() {
   return (
@@ -33,9 +37,13 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/symptom/:symptomName" element={<SymptomDetail />} />
+        <Route path="/all-appointments" element={<AllAppointments />} />
+        <Route path="/all-doctors" element={<AllDoctors />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/cookies" element={<CookiesPage />} />
+        <Route path="/policies" element={<PolicyPage />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/blog" element={<Blog />} />

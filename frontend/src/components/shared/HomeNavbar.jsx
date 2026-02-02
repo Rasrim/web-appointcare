@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import logoImage from "../images/AppointCarenobg.png";
+import logoImage from "../../images/AppointCarenobg.png";
 
 const HomeNavbar = ({ onBookAppointmentsClick }) => {
   const navigate = useNavigate();
@@ -139,7 +139,7 @@ const HomeNavbar = ({ onBookAppointmentsClick }) => {
         <div style={styles.navLinks}>
           <button
             onClick={() => {
-              onBookAppointmentsClick();
+              onBookAppointmentsClick?.();
               if (isMobile) setShowMobileMenu(false);
             }}
             style={styles.navLink}
@@ -150,7 +150,7 @@ const HomeNavbar = ({ onBookAppointmentsClick }) => {
           </button>
           <button
             onClick={() => {
-              onBookAppointmentsClick();
+              onBookAppointmentsClick?.();
               if (isMobile) setShowMobileMenu(false);
             }}
             style={styles.navLink}

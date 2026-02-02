@@ -1,18 +1,36 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { API_URL } from "../../utils/api";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import doctorImage from "../../images/doctor1.png";
 import SymptomsSection from "../../components/SymptomsSection";
 import HomeNavbar from "../../components/HomeNavbar";
+import HomeFooter from "../../components/HomeFooter";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [fadeIn] = useState(true);
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fadeIn, setFadeIn] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(16); // Today is January 16
+  const [selectedTime, setSelectedTime] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleNavLinkClick = () => {
+    const element = document.getElementById("calendar");
+    element?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSearchClick = () => {
+    if (searchQuery.trim()) {
+      navigate(`/all-doctors?search=${searchQuery}`);
+    }
+  };
 
   // Fade in animation on mount
   useEffect(() => {
-    // Component mounts with fade-in enabled
-    return () => {};
+    setFadeIn(true);
   }, []);
 
   const handleResize = () => {
@@ -24,27 +42,66 @@ const Home = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Fetch doctors
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/doctors`);
+        if (response.ok) {
+          const data = await response.json();
+          setDoctors(data);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDoctors();
+  }, []);
+
   return (
     <div style={{ ...styles.container, opacity: fadeIn ? 1 : 0, transition: "opacity 0.5s ease-in" }}>
-      <HomeNavbar />
+      <HomeNavbar onBookAppointmentsClick={handleNavLinkClick} />
+
+      {/* Add padding top to account for fixed navbar */}
+      <div style={{ paddingTop: "70px" }}></div>
 
       {/* Hero Section */}
       <section style={styles.heroSection}>
         <div style={styles.heroContent}>
           <div style={styles.heroText}>
             <h1 style={styles.heroTitle}>
-              Healthcare at Your Fingertips
+              No need to visit local hospitals
             </h1>
             <p style={styles.heroSubtitle}>
-              Book doctor appointments online
+              Book appointments online
             </p>
             <p style={styles.heroDescription}>
-              Connect with qualified healthcare professionals anytime, anywhere. Say goodbye to long waiting times and hello to convenient online consultations.
+              Your health is our priority
             </p>
-            <div style={styles.buttonGroup}>
-              <button style={styles.ctaButton}>Get Started</button>
-              <button style={styles.signInButton}>Sign In</button>
+            <div style={styles.doctorCount}>
+              <div style={styles.doctorAvatar}>
+                <span>👨‍⚕️</span>
+                <span>👩‍⚕️</span>
+              </div>
+              <span style={styles.doctorCountText}>+18 doctors are available</span>
             </div>
+            
+            {/* Search Bar */}
+            <div style={styles.searchBarContainer}>
+              <input
+                type="text"
+                placeholder="Search by doctor name or specialty..."
+                style={styles.searchInput}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') handleSearchClick();
+                }}
+              />
+              <button style={styles.searchButton} onClick={handleSearchClick}>Search</button>
+            </div>
+
+            <button style={styles.ctaButton} onClick={() => document.getElementById("doctors").scrollIntoView({ behavior: "smooth" })}>Find doctors</button>
           </div>
 
           {/* Hero Image */}
@@ -57,148 +114,138 @@ const Home = () => {
       </section>
 
       {/* Recommended Doctors Section */}
-      
-
-      {/* Why Choose AppointCare Section */}
-      <section style={styles.whyChooseSection}>
-        <h2 style={styles.whyChooseTitle}>Why Choose AppointCare?</h2>
-        <div style={styles.whyChooseContainer}>
-          <div 
-            style={styles.whyChooseCard}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-5px)";
-              e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
-            }}
-          >
-            <div style={styles.whyChooseIcon}>⏰</div>
-            <h3 style={styles.whyChooseCardTitle}>24/7 Availability</h3>
-            <p style={styles.whyChooseCardText}>Book appointments anytime that suits you best. No more waiting for clinic timings.</p>
-          </div>
-          <div 
-            style={styles.whyChooseCard}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-5px)";
-              e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
-            }}
-          >
-            <div style={styles.whyChooseIcon}>👨‍⚕️</div>
-            <h3 style={styles.whyChooseCardTitle}>Expert Doctors</h3>
-            <p style={styles.whyChooseCardText}>Access to verified and experienced healthcare professionals from various specialties.</p>
-          </div>
-          <div 
-            style={styles.whyChooseCard}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-5px)";
-              e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.05)";
-            }}
-          >
-            <div style={styles.whyChooseIcon}>🔒</div>
-            <h3 style={styles.whyChooseCardTitle}>Secure & Private</h3>
-            <p style={styles.whyChooseCardText}>Your health information is encrypted and protected with industry-standard security.</p>
-          </div>
+      <section style={styles.doctorsSection}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>Recommended Doctors</h2>
+          <a href="#" style={styles.viewAllLink}>View All ›</a>
         </div>
+
+        {!loading && doctors.length > 0 ? (
+          <div style={styles.doctorsContainer}>
+            {doctors.slice(0, 3).map((doctor, index) => (
+              <div key={index} style={styles.doctorCard}>
+                <div style={styles.doctorImageContainer}>
+                  <img 
+                    src={doctor.photo || doctorImage} 
+                    alt={doctor.name}
+                    style={styles.doctorImage}
+                  />
+                </div>
+                <h3 style={styles.doctorName}>{doctor.name}</h3>
+                <p style={styles.doctorSpecialty}>{doctor.specialty}</p>
+                <p style={styles.doctorExperience}>Specialist | {doctor.experience || "5"} years experience</p>
+                <div style={styles.doctorDetails}>
+                  <div style={styles.detailItem}>
+                    <span style={styles.detailIcon}>📅</span>
+                    <span style={styles.detailText}>{doctor.availability || "Tue, Thu"}</span>
+                  </div>
+                  <div style={styles.detailItem}>
+                    <span style={styles.detailIcon}>₹</span>
+                    <span style={styles.detailText}>{doctor.fee || "350"}</span>
+                  </div>
+                </div>
+                <div style={styles.doctorTiming}>
+                  <span style={styles.timingText}>{doctor.timing || "10:00 AM-01:00 PM"}</span>
+                  <span style={styles.startingText}>Starting</span>
+                </div>
+                <button style={styles.appointmentBtn}>Book an appointment</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={styles.noDoctorsMessage}>
+            <p>Loading doctors...</p>
+          </div>
+        )}
       </section>
 
       {/* Symptoms Section */}
       <SymptomsSection />
 
-      {/* Statistics Section */}
-      <section style={styles.statisticsSection}>
-        <div style={styles.statisticsContainer}>
-          <div style={styles.statisticCard}>
-            <div style={styles.statisticNumber}>50K+</div>
-            <div style={styles.statisticLabel}>Happy Patients</div>
-          </div>
-          <div style={styles.statisticCard}>
-            <div style={styles.statisticNumber}>500+</div>
-            <div style={styles.statisticLabel}>Verified Doctors</div>
-          </div>
-          <div style={styles.statisticCard}>
-            <div style={styles.statisticNumber}>100K+</div>
-            <div style={styles.statisticLabel}>Appointments Booked</div>
-          </div>
-          <div style={styles.statisticCard}>
-            <div style={styles.statisticNumber}>4.8★</div>
-            <div style={styles.statisticLabel}>Average Rating</div>
-          </div>
-        </div>
-      </section>
+      {/* Calendar Section for Booking */}
+      <section id="calendar" style={styles.calendarSection}>
+        <div style={styles.calendarWrapper}>
+          <h2 style={styles.sectionTitle}>Book Your Appointment</h2>
+          <p style={styles.calendarSubtitle}>Select a date and time that works best for you</p>
+          
+          <div style={styles.calendarContent}>
+            <div style={styles.miniCalendarContainer}>
+              <h3 style={styles.calendarMonthTitle}>January 2026</h3>
+              <div style={styles.daysOfWeek}>
+                <div style={styles.dayHeader}>Sun</div>
+                <div style={styles.dayHeader}>Mon</div>
+                <div style={styles.dayHeader}>Tue</div>
+                <div style={styles.dayHeader}>Wed</div>
+                <div style={styles.dayHeader}>Thu</div>
+                <div style={styles.dayHeader}>Fri</div>
+                <div style={styles.dayHeader}>Sat</div>
+              </div>
+              <div style={styles.daysGrid}>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                  <button 
+                    key={day} 
+                    onClick={() => setSelectedDate(day)}
+                    style={{
+                      ...styles.dayButton,
+                      backgroundColor: day === 16 ? "#3B82F6" : day === selectedDate ? "#E0E7FF" : "white",
+                      color: day === 16 ? "white" : "#333",
+                      fontWeight: day === 16 ? "700" : "500",
+                    }}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      {/* Ready to Book Section */}
-      <section style={styles.readyToBookSection}>
-        <div style={styles.readyToBookContent}>
-          <h2 style={styles.readyToBookTitle}>Ready to Book Your Appointment?</h2>
-          <p style={styles.readyToBookText}>Join thousands of patients who have already experienced convenient healthcare through AppointCare.</p>
-          <button style={styles.readyToBookButton}>Start Now</button>
+            <div style={styles.timeSlotContainer}>
+              <h3 style={styles.timeSlotTitle}>Available Time Slots</h3>
+              <div style={styles.timeSlots}>
+                {["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM"].map((time) => (
+                  <button 
+                    key={time} 
+                    onClick={() => setSelectedTime(time)}
+                    style={{
+                      ...styles.timeSlot,
+                      backgroundColor: selectedTime === time ? "#ffffff" : "rgba(255, 255, 255, 0.3)",
+                      color: selectedTime === time ? "#3B82F6" : "#ffffff",
+                      fontWeight: selectedTime === time ? "700" : "600",
+                      border: selectedTime === time ? "2px solid white" : "2px solid rgba(255, 255, 255, 0.5)",
+                    }}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+              <button 
+                style={styles.bookButton}
+                onClick={() => {
+                  alert("Please sign in first to book an appointment");
+                  navigate("/login");
+                }}
+              >
+                Proceed to Book
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer Section */}
-      <footer style={styles.footer}>
-        <div style={styles.footerContent}>
-          <div style={styles.footerSection}>
-            <h4 style={styles.footerTitle}>Service</h4>
-            <ul style={styles.footerList}>
-              <li><a href="#" style={styles.footerLink}>Searching</a></li>
-              <li><a href="#" style={styles.footerLink}>Booking</a></li>
-              <li><a href="#" style={styles.footerLink}>TimeSheet</a></li>
-            </ul>
-          </div>
-
-          <div style={styles.footerSection}>
-            <h4 style={styles.footerTitle}>Information</h4>
-            <ul style={styles.footerList}>
-              <li><a href="#" style={styles.footerLink}>FAQ</a></li>
-              <li><a href="#" style={styles.footerLink}>Blog</a></li>
-              <li><a href="#" style={styles.footerLink}>Support</a></li>
-            </ul>
-          </div>
-
-          <div style={styles.footerSection}>
-            <h4 style={styles.footerTitle}>Company</h4>
-            <ul style={styles.footerList}>
-              <li><a href="#" style={styles.footerLink}>About us</a></li>
-              <li><a href="#" style={styles.footerLink}>Contact us</a></li>
-            </ul>
-          </div>
-        </div>
-
-        <div style={styles.footerBottom}>
-          <div style={styles.footerLinks}>
-            <a href="#" style={styles.footerLink}>Terms</a>
-            <a href="#" style={styles.footerLink}>Privacy</a>
-            <a href="#" style={styles.footerLink}>Cookies</a>
-          </div>
-          <div style={styles.socialLinks}>
-            <a href="#" style={styles.socialIcon}>in</a>
-            <a href="#" style={styles.socialIcon}>f</a>
-            <a href="#" style={styles.socialIcon}>𝕏</a>
-          </div>
-        </div>
-      </footer>
+      <HomeFooter />
     </div>
   );
 };
 
 const styles = {
   container: {
-  
-    minHeight: "100vh",
-    background: "#fff",
-    overflow: "hidden",
-  },
+  minHeight: "100vh",
+  width: "100%",          
+  maxWidth: "100%",       
+  overflowX: "hidden",    
+  background: "#fff",
+},
+
   navbar: {
     position: "sticky",
     top: 0,
@@ -208,15 +255,13 @@ const styles = {
     boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
   },
   navContainer: {
-    maxWidth: "1400px",
-    margin: "0 auto",
-    padding: "clamp(8px, 3vw, 12px) 20px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "15px",
-  },
+  width: "100%",
+  padding: "12px 40px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
   logo: {
     display: "flex",
     alignItems: "center",
@@ -270,42 +315,52 @@ const styles = {
     },
   },
   heroSection: {
-    padding: "clamp(30px, 8vw, 60px) 20px",
-    maxWidth: "1400px",
-    margin: "0 auto",
-    animation: "slideDown 0.8s ease-out",
     display: "flex",
+    alignItems: "center",
     justifyContent: "center",
+    gap: "40px",
+    width: "100%",
+    maxWidth: "100%",
+    overflow: "hidden",
+    padding: "clamp(40px, 10vw, 80px) 20px",
+    background: "linear-gradient(135deg, #5B9FBD 0%, #7AADBE 100%)",
+    borderRadius: "20px",
+    marginBottom: "40px",
+    boxShadow: "0 10px 40px rgba(91, 159, 189, 0.2)",
   },
+
   heroContent: {
     display: "flex",
     alignItems: "center",
     gap: "clamp(30px, 5vw, 60px)",
     justifyContent: "center",
     flexWrap: "wrap",
+    maxWidth: "1200px",
   },
   heroText: {
     flex: 1,
     minWidth: "250px",
     textAlign: "center",
+    color: "#fff",
   },
   heroTitle: {
     fontSize: "clamp(1.8rem, 7vw, 3.5rem)",
     fontWeight: "700",
-    color: "#1a1a1a",
+    color: "#ffffff",
     lineHeight: "1.2",
-    marginBottom: "20px",
+    marginBottom: "15px",
     animation: "fadeInUp 0.8s ease-out 0.2s both",
   },
   heroSubtitle: {
     fontSize: "clamp(1.1rem, 4vw, 1.5rem)",
-    color: "#3B82F6",
-    marginBottom: "12px",
+    color: "#ffffff",
+    fontWeight: "600",
+    marginBottom: "8px",
     animation: "fadeInUp 0.8s ease-out 0.3s both",
   },
   heroDescription: {
     fontSize: "clamp(0.85rem, 3vw, 1rem)",
-    color: "#999",
+    color: "rgba(255, 255, 255, 0.9)",
     marginBottom: "30px",
     animation: "fadeInUp 0.8s ease-out 0.4s both",
   },
@@ -317,16 +372,21 @@ const styles = {
     marginBottom: "30px",
     animation: "fadeInUp 0.8s ease-out 0.5s both",
     flexWrap: "wrap",
+    padding: "12px 20px",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: "10px",
+    backdropFilter: "blur(10px)",
   },
   doctorAvatar: {
     display: "flex",
-    gap: "8px",
+    gap: "2px",
     fontSize: "clamp(1.5rem, 5vw, 2rem)",
     justifyContent: "center",
   },
   doctorCountText: {
     fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
-    color: "#666",
+    color: "#ffffff",
+    fontWeight: "600",
   },
   ctaButton: {
     padding: "clamp(10px, 3vw, 14px) clamp(20px, 5vw, 32px)",
@@ -340,27 +400,46 @@ const styles = {
     transition: "all 0.3s ease",
     boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
     animation: "fadeInUp 0.8s ease-out 0.6s both",
+    ":hover": {
+      background: "#2563EB",
+      boxShadow: "0 6px 16px rgba(59, 130, 246, 0.4)",
+    },
   },
-  signInButton: {
-    padding: "clamp(10px, 3vw, 14px) clamp(20px, 5vw, 32px)",
-    background: "transparent",
-    color: "#3B82F6",
-    border: "2px solid #3B82F6",
+  searchBarContainer: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "20px",
+    marginBottom: "20px",
+    justifyContent: "center",
+    animation: "fadeInUp 0.8s ease-out 0.7s both",
+  },
+  searchInput: {
+    padding: "clamp(8px, 2vw, 12px) clamp(15px, 3vw, 20px)",
+    border: "1px solid #ddd",
     borderRadius: "8px",
-    fontSize: "clamp(0.9rem, 2vw, 1rem)",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+    minWidth: "300px",
+    flex: 1,
+    maxWidth: "400px",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+    ":focus": {
+      outline: "none",
+      borderColor: "#3B82F6",
+      boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)",
+    },
+  },
+  searchButton: {
+    padding: "clamp(8px, 2vw, 12px) clamp(15px, 3vw, 24px)",
+    background: "#3B82F6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
     fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    animation: "fadeInUp 0.8s ease-out 0.6s both",
-  },
-  buttonGroup: {
-    display: "flex",
-    gap: "15px",
-    flexWrap: "wrap",
-    marginTop: "20px",
-    justifyContent: "center",
-    animation: "fadeInUp 0.8s ease-out 0.6s both",
-    width: "100%",
+    boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
   },
   heroImage: {
     flex: 1,
@@ -373,9 +452,9 @@ const styles = {
     height: "auto",
   },
   doctorsSection: {
-    padding: "clamp(40px, 8vw, 80px) 20px",
-    maxWidth: "1400px",
-    margin: "0 auto",
+  width: "100%",
+  padding: "clamp(30px, 8vw, 80px) clamp(15px, 5vw, 40px)",
+  boxSizing: "border-box",
   },
   sectionHeader: {
     display: "flex",
@@ -425,10 +504,10 @@ const styles = {
     border: "3px solid #3B82F6",
   },
   doctorImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
+  maxWidth: "100%",
+  flexShrink: 1,
+
+},
   doctorName: {
     fontSize: "clamp(1rem, 4vw, 1.3rem)",
     fontWeight: "700",
@@ -563,85 +642,12 @@ const styles = {
     margin: 0,
     fontWeight: "500",
   },
-  footer: {
-    background: "#f9f9f9",
-    padding: "clamp(30px, 5vw, 60px) 20px 20px",
-    borderTop: "1px solid #eee",
-  },
-  footerContent: {
-    maxWidth: "1400px",
-    margin: "0 auto",
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "40px",
-    marginBottom: "40px",
-  },
-  footerSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  footerTitle: {
-    fontSize: "0.95rem",
-    fontWeight: "600",
-    color: "#1a1a1a",
-    margin: 0,
-  },
-  footerList: {
-    listStyle: "none",
-    padding: 0,
-    margin: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  footerLink: {
-    color: "#999",
-    textDecoration: "none",
-    fontSize: "0.85rem",
-    transition: "color 0.3s ease",
-    ":hover": {
-      color: "#3B82F6",
-    },
-  },
-  footerBottom: {
-    maxWidth: "1400px",
-    margin: "0 auto",
-    padding: "20px 0",
-    borderTop: "1px solid #eee",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  footerLinks: {
-    display: "flex",
-    gap: "20px",
-  },
-  socialLinks: {
-    display: "flex",
-    gap: "15px",
-  },
-  socialIcon: {
-    width: "36px",
-    height: "36px",
-    background: "#3B82F6",
-    color: "#fff",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textDecoration: "none",
-    fontSize: "0.9rem",
-    fontWeight: "600",
-    transition: "all 0.3s ease",
-    ":hover": {
-      background: "#2563EB",
-    },
-  },
   calendarSection: {
-    padding: "clamp(40px, 8vw, 80px) 20px",
+    padding: "clamp(30px, 8vw, 80px) clamp(12px, 4vw, 20px)",
     background: "#fff",
     borderTop: "1px solid #eee",
+    boxSizing: "border-box",
+    width: "100%",
   },
   calendarWrapper: {
     maxWidth: "1400px",
@@ -656,14 +662,16 @@ const styles = {
   },
   calendarContent: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "40px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: "clamp(20px, 4vw, 40px)",
+    boxSizing: "border-box",
   },
   miniCalendarContainer: {
     background: "#f9f9f9",
-    padding: "30px",
+    padding: "clamp(15px, 3vw, 30px)",
     borderRadius: "12px",
     border: "1px solid #eee",
+    boxSizing: "border-box",
   },
   calendarMonthTitle: {
     fontSize: "1.3rem",
@@ -691,12 +699,12 @@ const styles = {
     gap: "8px",
   },
   dayButton: {
-    padding: "12px",
+    padding: "clamp(8px, 2vw, 12px)",
     border: "1px solid #ddd",
     borderRadius: "6px",
     background: "#fff",
     cursor: "pointer",
-    fontSize: "0.95rem",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
     fontWeight: "600",
     color: "#333",
     transition: "all 0.3s ease",
@@ -704,11 +712,12 @@ const styles = {
   timeSlotContainer: {
     background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)",
     color: "#fff",
-    padding: "30px",
+    padding: "clamp(20px, 4vw, 30px)",
     borderRadius: "12px",
+    boxSizing: "border-box",
   },
   timeSlotTitle: {
-    fontSize: "1.3rem",
+    fontSize: "clamp(1.1rem, 4vw, 1.3rem)",
     fontWeight: "700",
     color: "#fff",
     marginBottom: "20px",
@@ -716,12 +725,12 @@ const styles = {
   },
   timeSlots: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-    gap: "10px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
+    gap: "clamp(8px, 2vw, 10px)",
     marginBottom: "30px",
   },
   timeSlot: {
-    padding: "12px",
+    padding: "clamp(10px, 2vw, 12px)",
     background: "rgba(255, 255, 255, 0.2)",
     border: "2px solid rgba(255, 255, 255, 0.3)",
     borderRadius: "6px",
@@ -741,107 +750,7 @@ const styles = {
     fontWeight: "700",
     cursor: "pointer",
     transition: "all 0.3s ease",
-  },
-  whyChooseSection: {
-    padding: "clamp(40px, 8vw, 80px) 20px",
-    maxWidth: "1400px",
-    margin: "0 auto",
-    textAlign: "center",
-  },
-  whyChooseTitle: {
-    fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
-    fontWeight: "700",
-    marginBottom: "50px",
-    color: "#1f2937",
-  },
-  whyChooseContainer: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "30px",
-  },
-  whyChooseCard: {
-    padding: "30px",
-    backgroundColor: "#f9fafb",
-    borderRadius: "12px",
-    transition: "all 0.3s ease",
-    cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-  },
-  whyChooseIcon: {
-    fontSize: "3rem",
-    marginBottom: "15px",
-  },
-  whyChooseCardTitle: {
-    fontSize: "1.2rem",
-    fontWeight: "700",
-    marginBottom: "10px",
-    color: "#1f2937",
-  },
-  whyChooseCardText: {
-    fontSize: "0.95rem",
-    color: "#6b7280",
-    lineHeight: "1.6",
-  },
-  statisticsSection: {
-    backgroundColor: "#3B82F6",
-    color: "#fff",
-    width: "100%",
-    marginLeft: "-20px",
-    marginRight: "-20px",
-    padding: "clamp(40px, 8vw, 80px) 20px",
-  },
-  statisticsContainer: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "30px",
-    textAlign: "center",
-    maxWidth: "1400px",
-    margin: "0 auto",
-  },
-  statisticCard: {
-    padding: "30px 20px",
-  },
-  statisticNumber: {
-    fontSize: "clamp(2rem, 6vw, 3.5rem)",
-    fontWeight: "700",
-    marginBottom: "10px",
-  },
-  statisticLabel: {
-    fontSize: "1rem",
-    fontWeight: "500",
-  },
-  readyToBookSection: {
-    padding: "clamp(40px, 8vw, 80px) 20px",
-    maxWidth: "1400px",
-    margin: "0 auto",
-    textAlign: "center",
-  },
-  readyToBookContent: {
-    padding: "40px",
-    borderRadius: "12px",
-  },
-  readyToBookTitle: {
-    fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
-    fontWeight: "700",
-    marginBottom: "15px",
-    color: "#1f2937",
-  },
-  readyToBookText: {
-    fontSize: "1rem",
-    color: "#6b7280",
-    marginBottom: "30px",
-    lineHeight: "1.6",
-  },
-  readyToBookButton: {
-    padding: "12px 30px",
-    background: "#3B82F6",
-    color: "#fff",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "1rem",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
+    marginTop: "40px",
   },
 };
 
