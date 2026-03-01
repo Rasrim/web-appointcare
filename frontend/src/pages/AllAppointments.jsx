@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import HomeNavbar from "../../components/shared/HomeNavbar";
-import HomeFooter from "../../components/shared/HomeFooter";
+import { toast } from "react-toastify";
 import { FaArrowLeft, FaCalendarAlt, FaClock, FaStethoscope } from "react-icons/fa";
 
 const AllAppointments = () => {
@@ -71,7 +70,7 @@ const AllAppointments = () => {
         appointments.filter((apt) => apt.id !== appointmentId)
       );
     } catch (err) {
-      alert("Error cancelling appointment: " + err.message);
+      toast.error("Error cancelling appointment: " + err.message);
     }
   };
 
@@ -350,7 +349,6 @@ const AllAppointments = () => {
           </div>
         )}
       </div>
-      <HomeFooter />
     </div>
   );
 };

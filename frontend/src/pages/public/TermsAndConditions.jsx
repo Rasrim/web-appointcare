@@ -1,11 +1,34 @@
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
 import HomeNavbar from "../../components/HomeNavbar";
 import HomeFooter from "../../components/HomeFooter";
 
 const TermsAndConditions = () => {
+  const navigate = useNavigate();
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <HomeNavbar />
-      <div style={{ flex: 1, maxWidth: "900px", margin: "0 auto", padding: "40px 20px", width: "100%" }}>
+      <div style={{ flex: 1, maxWidth: "900px", margin: "0 auto", padding: "40px 20px", width: "100%", paddingTop: "80px" }}>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            backgroundColor: "transparent",
+            border: "none",
+            color: "#3B82F6",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            marginBottom: "32px",
+            padding: "8px",
+          }}
+          onMouseOver={(e) => e.target.style.color = "#2563EB"}
+          onMouseOut={(e) => e.target.style.color = "#3B82F6"}
+        >
+          <FaArrowLeft /> Back
+        </button>
         <h1 style={{ fontSize: "2.5rem", marginBottom: "20px", color: "#1a1a1a" }}>Terms and Conditions</h1>
         <p style={{ fontSize: "0.9rem", color: "#666", marginBottom: "30px" }}>
           Last updated: {new Date().toLocaleDateString()}

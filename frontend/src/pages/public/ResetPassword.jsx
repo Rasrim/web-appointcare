@@ -165,11 +165,9 @@ const ResetPassword = () => {
         </Link>
         
         <div style={styles.formContainer}>
-          <h1 style={styles.title}><center>Reset Password</center></h1>
-          <p style={styles.subtitle}>
-            <center>
+          <h1 style={{...styles.title, textAlign: 'center'}}>Reset Password</h1>
+          <p style={{...styles.subtitle, textAlign: 'center'}}>
             Enter your new password below
-            </center>
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)}>

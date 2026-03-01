@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const logger = require('../utils/logger');
+const { sendAppointmentConfirmationEmail } = require('../config/email');
 
 // Get doctor's schedule
 exports.getDoctorSchedule = async (req, res) => {
@@ -10,7 +11,7 @@ exports.getDoctorSchedule = async (req, res) => {
     logger.info(`Fetching schedule for doctor: ${doctorId}`);
 
     const result = await client.query(
-      'SELECT * FROM doctor_schedule WHERE doctor_id = $1',
+      'SELECT * FROM doctor_schedules WHERE doctor_id = $1',
       [doctorId]
     );
 
@@ -65,7 +66,7 @@ exports.createSchedule = async (req, res) => {
 
     // Check if schedule already exists
     const existingSchedule = await client.query(
-      'SELECT id FROM doctor_schedule WHERE doctor_id = $1',
+      'SELECT id FROM doctor_schedules WHERE doctor_id = $1',
       [doctorId]
     );
 
@@ -78,10 +79,10 @@ exports.createSchedule = async (req, res) => {
     }
 
     const result = await client.query(
-      `INSERT INTO doctor_schedule (doctor_id, start_date, end_date, start_time, end_time, days_of_week)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO doctor_schedules (doctor_id, schedule_date, start_time, end_time, duration_minutes, is_active)
+       VALUES ($1, $2, $3, $4, 30, true)
        RETURNING *`,
-      [doctorId, startDate, endDate, startTime, endTime, daysOfWeek || '1,2,3,4,5']
+      [doctorId, startDate, startTime, endTime]
     );
 
     client.release();
@@ -113,7 +114,7 @@ exports.updateSchedule = async (req, res) => {
 
     logger.info(`Updating schedule for doctor: ${doctorId}`);
 
-    let updateQuery = 'UPDATE doctor_schedule SET ';
+    let updateQuery = 'UPDATE doctor_schedules SET ';
     const updates = [];
     const values = [];
     let paramCount = 1;
@@ -194,7 +195,7 @@ exports.deleteSchedule = async (req, res) => {
     logger.info(`Deleting schedule for doctor: ${doctorId}`);
 
     const result = await client.query(
-      'DELETE FROM doctor_schedule WHERE doctor_id = $1 RETURNING id',
+      'DELETE FROM doctor_schedules WHERE doctor_id = $1 RETURNING id',
       [doctorId]
     );
 
@@ -240,7 +241,7 @@ exports.getAvailableSlots = async (req, res) => {
     }
 
     const scheduleResult = await client.query(
-      'SELECT * FROM doctor_schedule WHERE doctor_id = $1',
+      'SELECT * FROM doctor_schedules WHERE doctor_id = $1',
       [doctorId]
     );
 
@@ -313,6 +314,36 @@ exports.bookAppointment = async (req, res) => {
       });
     }
 
+    // Get user details for email
+    const userResult = await client.query(
+      'SELECT full_name, email FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const user = userResult.rows[0];
+    if (!user) {
+      client.release();
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Get doctor details for email
+    const doctorResult = await client.query(
+      'SELECT full_name, specialization, consultationFee FROM doctors WHERE id = $1',
+      [doctorId]
+    );
+
+    const doctor = doctorResult.rows[0];
+    if (!doctor) {
+      client.release();
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found',
+      });
+    }
+
     // Create appointment
     const result = await client.query(
       `INSERT INTO appointments (user_id, doctor_id, appointment_date, appointment_time, notes, status)
@@ -323,12 +354,30 @@ exports.bookAppointment = async (req, res) => {
 
     client.release();
 
-    logger.info(`Appointment booked successfully: ${result.rows[0].id}`);
+    const appointment = result.rows[0];
+
+    logger.info(`Appointment booked successfully: ${appointment.id}`);
+
+    // Send confirmation email (non-blocking - don't fail if email fails)
+    try {
+      await sendAppointmentConfirmationEmail(user.email, {
+        doctorName: doctor.full_name,
+        date: appointmentDate,
+        time: appointmentTime,
+        specialization: doctor.specialization,
+        fee: doctor.consultationFee || 500,
+        patientName: user.full_name,
+      });
+      logger.info(`Confirmation email sent to ${user.email}`);
+    } catch (emailError) {
+      logger.error(`Failed to send confirmation email: ${emailError.message}`);
+      // Don't fail the appointment booking if email fails
+    }
 
     res.status(201).json({
       success: true,
       message: 'Appointment booked successfully',
-      data: result.rows[0],
+      data: appointment,
     });
   } catch (error) {
     client.release();
@@ -382,10 +431,14 @@ exports.getAllAppointments = async (req, res) => {
     logger.info('Admin: Fetching all appointments');
 
     const result = await client.query(
-      `SELECT a.*, d.name, d.specialization
+      `SELECT a.id, a.user_id, a.doctor_id, a.appointment_date, a.start_time, a.clinic, a.status, a.notes,
+              a.created_at, a.updated_at,
+              u.full_name as user_name, u.phone_number,
+              d.name as doctor_name, d.specialty as specialization
        FROM appointments a
+       LEFT JOIN users u ON a.user_id = u.id
        LEFT JOIN doctors d ON a.doctor_id = d.id
-       ORDER BY a.appointment_date DESC`
+       ORDER BY a.appointment_date DESC, a.start_time DESC`
     );
 
     client.release();
@@ -400,6 +453,327 @@ exports.getAllAppointments = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching appointments',
+      error: error.message,
+    });
+  }
+};
+// Admin: Create schedule with date and time
+exports.createScheduleAdmin = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { doctor_id, schedule_date, start_time, end_time, clinic } = req.body;
+
+    console.log("📝 createScheduleAdmin called with:", { doctor_id, schedule_date, start_time, end_time, clinic });
+
+    if (!doctor_id || !schedule_date || !start_time || !end_time) {
+      console.warn("⚠️  Missing required fields:", { doctor_id, schedule_date, start_time, end_time });
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+      });
+    }
+
+    // Check if doctor exists (in users table)
+    console.log("🔍 Checking if doctor exists with ID:", doctor_id);
+    const doctorCheck = await client.query('SELECT id, full_name FROM users WHERE id = $1', [doctor_id]);
+    if (doctorCheck.rows.length === 0) {
+      console.warn("⚠️  Doctor not found with ID:", doctor_id);
+      client.release();
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found',
+      });
+    }
+
+    console.log("✅ Doctor found:", doctorCheck.rows[0].full_name);
+
+    const result = await client.query(
+      `INSERT INTO doctor_schedules (doctor_id, schedule_date, start_time, end_time, duration_minutes, is_active)
+       VALUES ($1, $2, $3, $4, 30, true)
+       RETURNING *`,
+      [doctor_id, schedule_date, start_time, end_time]
+    );
+
+    client.release();
+
+    console.log("✅ Schedule created successfully:", result.rows[0]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Schedule created successfully',
+      data: result.rows[0],
+    });
+  } catch (error) {
+    client.release();
+    console.error("❌ Error creating schedule:", error.message);
+    console.error("   Stack:", error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating schedule',
+      error: error.message,
+      details: error.detail || error.constraint,
+    });
+  }
+};
+
+// Admin: Get all schedules with doctor info
+exports.getAllSchedulesAdmin = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    console.log("📅 getAllSchedulesAdmin called");
+    
+    const result = await client.query(
+      `SELECT ds.id, ds.doctor_id, ds.schedule_date, ds.start_time, ds.end_time, ds.is_active, d.full_name as doctor_name
+       FROM doctor_schedules ds
+       LEFT JOIN users d ON ds.doctor_id = d.id
+       ORDER BY ds.schedule_date DESC, ds.start_time DESC`
+    );
+
+    console.log("📋 Fetched schedules:", result.rows.length, "records");
+    console.log("📝 Schedule data:", JSON.stringify(result.rows, null, 2));
+
+    client.release();
+
+    res.json({
+      success: true,
+      schedules: result.rows,
+      data: result.rows,
+    });
+  } catch (error) {
+    client.release();
+    console.error("❌ Error fetching schedules:", error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching schedules',
+      error: error.message,
+    });
+  }
+};
+
+// Admin: Update schedule
+exports.updateScheduleAdmin = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { doctor_id, schedule_date, start_time, end_time, clinic } = req.body;
+
+    if (!doctor_id || !schedule_date || !start_time || !end_time) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+      });
+    }
+
+    const result = await client.query(
+      `UPDATE doctor_schedules 
+       SET doctor_id = $1, schedule_date = $2, start_time = $3, end_time = $4
+       WHERE id = $5
+       RETURNING *`,
+      [doctor_id, schedule_date, start_time, end_time, id]
+    );
+
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Schedule not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Schedule updated successfully',
+      data: result.rows[0],
+    });
+  } catch (error) {
+    client.release();
+    logger.error(`Error updating schedule: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating schedule',
+      error: error.message,
+    });
+  }
+};
+
+// Admin: Delete schedule
+exports.deleteScheduleAdmin = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    await client.query(
+      'DELETE FROM doctor_schedules WHERE id = $1',
+      [id]
+    );
+
+    client.release();
+
+    res.json({
+      success: true,
+      message: 'Schedule deleted successfully',
+    });
+  } catch (error) {
+    client.release();
+    logger.error(`Error deleting schedule: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting schedule',
+      error: error.message,
+    });
+  }
+};
+
+// Generate 30-minute time slots
+const generateTimeSlots = (startTime, endTime) => {
+  const slots = [];
+  const [startHour, startMin] = startTime.split(':').map(Number);
+  const [endHour, endMin] = endTime.split(':').map(Number);
+
+  let currentHour = startHour;
+  let currentMin = startMin;
+
+  while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+    const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+    slots.push(timeStr);
+    currentMin += 30;
+    if (currentMin >= 60) {
+      currentHour += Math.floor(currentMin / 60);
+      currentMin = currentMin % 60;
+    }
+  }
+  return slots;
+};
+
+// Get available dates for a doctor (next 30 days)
+exports.getAvailableDatesForBooking = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { doctorId } = req.query;
+
+    console.log("📅 getAvailableDatesForBooking called for doctor:", doctorId);
+
+    if (!doctorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Doctor ID is required',
+      });
+    }
+
+    const result = await client.query(
+      `SELECT DISTINCT schedule_date FROM doctor_schedules 
+       WHERE doctor_id = $1 AND schedule_date >= CURRENT_DATE 
+       AND schedule_date <= CURRENT_DATE + INTERVAL '30 days'
+       ORDER BY schedule_date ASC`,
+      [doctorId]
+    );
+
+    console.log("📋 Available dates query returned:", result.rows.length, "dates");
+    console.log("📝 Dates:", result.rows.map(r => r.schedule_date));
+
+    client.release();
+
+    res.json({
+      success: true,
+      availableDates: result.rows.map(row => row.schedule_date)
+    });
+  } catch (error) {
+    client.release();
+    console.error("❌ Error fetching available dates:", error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching available dates',
+      error: error.message,
+    });
+  }
+};
+
+// Get available time slots for a doctor on a specific date
+exports.getAvailableTimeSlotsForBooking = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { doctorId, date } = req.query;
+
+    console.log("⏰ getAvailableTimeSlotsForBooking called with:", { doctorId, date, type: typeof date });
+
+    if (!doctorId || !date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Doctor ID and date are required',
+      });
+    }
+
+    // Check if date is in the past
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot book appointments for past dates'
+      });
+    }
+
+    // Get doctor schedule for the date
+    console.log("🔍 Querying schedule for doctor_id:", doctorId, "schedule_date:", date);
+    const scheduleResult = await client.query(
+      `SELECT * FROM doctor_schedules 
+       WHERE doctor_id = $1 AND schedule_date = $2`,
+      [doctorId, date]
+    );
+
+    console.log("📅 Schedule query result rows:", scheduleResult.rows.length);
+    console.log("📋 Full schedule result:", JSON.stringify(scheduleResult.rows, null, 2));
+
+    if (scheduleResult.rows.length === 0) {
+      console.log("⚠️  No schedule found for doctor_id:", doctorId, "date:", date);
+      client.release();
+      return res.json({
+        success: true,
+        availableSlots: [],
+        message: 'No schedule available for this date'
+      });
+    }
+
+    const schedule = scheduleResult.rows[0];
+    console.log("✅ Schedule found:", { start_time: schedule.start_time, end_time: schedule.end_time });
+
+    // Generate time slots (30-minute intervals)
+    const allSlots = generateTimeSlots(schedule.start_time, schedule.end_time);
+    console.log("🕒 Generated slots:", allSlots);
+
+    // Get booked appointments for this date
+    const bookedResult = await client.query(
+      `SELECT appointment_time FROM appointments 
+       WHERE doctor_id = $1 AND appointment_date = $2 AND status = 'confirmed'`,
+      [doctorId, date]
+    );
+
+    const bookedTimes = bookedResult.rows.map(row => row.appointment_time);
+    console.log("🚫 Booked times:", bookedTimes);
+
+    // Filter out booked slots
+    const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
+    console.log("✨ Available slots after filtering:", availableSlots);
+
+    client.release();
+
+    res.json({
+      success: true,
+      scheduleId: schedule.id,
+      date: date,
+      allSlots: allSlots,
+      availableSlots: availableSlots,
+      bookedSlots: bookedTimes
+    });
+  } catch (error) {
+    client.release();
+    console.error("❌ Error fetching available time slots:", error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching available time slots',
       error: error.message,
     });
   }

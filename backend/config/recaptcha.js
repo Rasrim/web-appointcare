@@ -1,7 +1,7 @@
 // reCAPTCHA verification service
 const axios = require('axios');
 
-const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || 'your_recaptcha_secret_key';
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '6Lf6lFgsAAAAAEAoAUC4j6XuoBXCKSWv-Hz2Qv-V';
 const RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 
 // Verify reCAPTCHA token with Google

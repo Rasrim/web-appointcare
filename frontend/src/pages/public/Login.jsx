@@ -198,11 +198,9 @@ const Login = () => {
         <button style={styles.closeButton} onClick={() => navigate("/")} title="Close">✕</button>
         
         <div style={styles.formContainer}>
-          <h1 style={styles.title}><center>Welcome back</center></h1>
-          <p style={styles.subtitle}>
-            <center>
+          <h1 style={{...styles.title, textAlign: 'center'}}>Welcome back</h1>
+          <p style={{...styles.subtitle, textAlign: 'center'}}>
             New to AppointCare? <Link to="/register" style={styles.signupLink}>Sign up</Link>
-            </center>
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)}>

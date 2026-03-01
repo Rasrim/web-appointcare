@@ -1,30 +1,29 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { API_URL } from "../utils/api";
 
 const calculateAge = (dateString) => {
   if (!dateString) return 0;
   try {
-    let day, month, year;
+    let birthDate;
     
-    if (dateString.includes("-")) {
-      // Format: YYYY-MM-DD or DD-MM-YYYY
-      const parts = dateString.split("-");
-      if (parts[0].length === 4) {
-        // YYYY-MM-DD format
-        [year, month, day] = parts;
-      } else {
-        // DD-MM-YYYY format
-        [day, month, year] = parts;
-      }
-    } else if (dateString.includes("/")) {
-      // Format: DD/MM/YYYY
-      [day, month, year] = dateString.split("/");
+    // Format: YYYY-MM-DDTHH:MM:SS.SSSZ (ISO with timestamp)
+    if (dateString.includes("T") && dateString.includes("Z")) {
+      birthDate = new Date(dateString);
+    } 
+    // Format: YYYY-MM-DD (ISO format)
+    else if (dateString.includes("-") && dateString.length === 10) {
+      birthDate = new Date(dateString);
+    } 
+    // Format: DD/MM/YYYY
+    else if (dateString.includes("/")) {
+      const [day, month, year] = dateString.split("/");
+      birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     } else {
       return 0;
     }
 
-    const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -34,9 +33,49 @@ const calculateAge = (dateString) => {
     }
     
     return age > 0 ? age : 0;
-  } catch {
+  } catch (error) {
+    console.error("Age calculation error:", error);
     return 0;
   }
+};
+
+// Convert DD/MM/YYYY to YYYY-MM-DD for HTML date input
+const formatDateForInput = (dateString) => {
+  if (!dateString) return "";
+  
+  // Already in YYYY-MM-DD format
+  if (dateString.includes("-") && dateString.length === 10) {
+    return dateString;
+  }
+  
+  // DD/MM/YYYY format
+  if (dateString.includes("/")) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  return "";
+};
+
+// Convert YYYY-MM-DD to DD/MM/YYYY for display
+const formatDateForDisplay = (dateString) => {
+  if (!dateString) return "";
+  
+  // YYYY-MM-DD format
+  if (dateString.includes("-") && dateString.length === 10) {
+    const [year, month, day] = dateString.split("-");
+    return `${day}/${month}/${year}`;
+  }
+  
+  // Already in DD/MM/YYYY format
+  if (dateString.includes("/")) {
+    return dateString;
+  }
+  
+  return "";
 };
 
 const Profile = () => {
@@ -57,7 +96,7 @@ const Profile = () => {
     gender: localStorage.getItem("gender") || "Not specified",
     location: localStorage.getItem("location") || "Nepal",
     dateOfBirth: localStorage.getItem("dateOfBirth") || "01/01/1990",
-    age: calculateAge(localStorage.getItem("dateOfBirth") || "01/01/1990"),
+    age: calculateAge(localStorage.getItem("birthDate") || localStorage.getItem("dateOfBirth") || "01/01/1990"),
     phoneNumber: localStorage.getItem("userPhoneNumber") || "+1 234 567 890",
     email: localStorage.getItem("userEmail") || "patient@example.com",
     bio: localStorage.getItem("bio") || "Patient Bio",
@@ -75,32 +114,67 @@ const Profile = () => {
       if (!token || !userId) return;
 
       try {
+        if (!API_URL) {
+          console.error("API_URL not configured");
+          return;
+        }
+
         const response = await fetch(`${API_URL}/api/users/${userId}/profile`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         });
 
         if (response.ok) {
           const data = await response.json();
+          
+          // Convert date from YYYY-MM-DD to DD/MM/YYYY for display
+          let displayDate = data.dateOfBirth || "01/01/1990";
+          if (displayDate && displayDate.includes('-') && displayDate.length === 10) {
+            const [year, month, day] = displayDate.split('-');
+            displayDate = `${day}/${month}/${year}`;
+          }
+          
           const updatedProfile = {
-            name: data.fullName || profileData.name,
-            gender: data.gender || profileData.gender,
-            location: data.location || profileData.location,
-            dateOfBirth: data.dateOfBirth || profileData.dateOfBirth,
-            age: calculateAge(data.dateOfBirth || profileData.dateOfBirth),
-            phoneNumber: data.phoneNumber || profileData.phoneNumber,
-            email: data.email || profileData.email,
-            bio: data.bio || profileData.bio,
-            profileImage: data.profileImage || profileData.profileImage,
+            name: data.fullName || "User",
+            gender: data.gender || "Not specified",
+            location: data.location || "Nepal",
+            dateOfBirth: displayDate,
+            age: calculateAge(displayDate),
+            phoneNumber: data.phoneNumber || "",
+            email: data.email || "",
+            bio: data.bio || "Patient Bio",
+            profileImage: data.profileImage || null,
           };
           
+          console.log("Profile loaded from database. Date:", displayDate);
+          
+          // Update state with database values
           setProfileData(updatedProfile);
           setEditedData(updatedProfile);
+          
+          // Also update localStorage to keep it in sync
+          localStorage.setItem("fullName", updatedProfile.name);
+          localStorage.setItem("gender", updatedProfile.gender);
+          localStorage.setItem("location", updatedProfile.location);
+          localStorage.setItem("dateOfBirth", updatedProfile.dateOfBirth);
+          localStorage.setItem("userPhoneNumber", updatedProfile.phoneNumber);
+          localStorage.setItem("userEmail", updatedProfile.email);
+          localStorage.setItem("bio", updatedProfile.bio);
+          if (updatedProfile.profileImage) {
+            localStorage.setItem("profileImage", updatedProfile.profileImage);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error("Failed to fetch profile:", response.status, errorText);
+          // Use localStorage as fallback
         }
       } catch (err) {
         console.error("Error fetching profile from database:", err);
+        console.error("API URL attempted:", `${API_URL}/api/users/${userId}/profile`);
+        // Use localStorage as fallback if API fails
       }
     };
 
@@ -168,35 +242,65 @@ const Profile = () => {
       
       if (!userId || !token) return;
 
+      // Convert date from DD/MM/YYYY to YYYY-MM-DD for database
+      let dateForDatabase = data.dateOfBirth;
+      if (data.dateOfBirth && data.dateOfBirth.includes('/')) {
+        const [day, month, year] = data.dateOfBirth.split('/');
+        dateForDatabase = `${year}-${month}-${day}`;
+      }
+
+      // Build payload - only include image if it changed (starts with 'data:' means it's new)
+      const payload = {
+        fullName: data.name,
+        gender: data.gender,
+        location: data.location,
+        dateOfBirth: dateForDatabase,
+        phoneNumber: data.phoneNumber,
+        email: data.email,
+        bio: data.bio,
+      };
+
+      // Only include image if it's actually new (base64 data)
+      if (data.profileImage && data.profileImage.startsWith('data:')) {
+        payload.profileImage = data.profileImage;
+      }
+
+      console.log("Sending profile update to:", `${API_URL}/api/users/${userId}/profile`);
+      console.log("Date being saved:", dateForDatabase);
+      console.log("Payload size:", JSON.stringify(payload).length, "bytes");
+
       const response = await fetch(`${API_URL}/api/users/${userId}/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          fullName: data.name,
-          gender: data.gender,
-          location: data.location,
-          dateOfBirth: data.dateOfBirth,
-          phoneNumber: data.phoneNumber,
-          email: data.email,
-          bio: data.bio,
-          profileImage: data.profileImage,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
+        // Update localStorage with saved data (keep as DD/MM/YYYY for display)
+        localStorage.setItem("fullName", data.name);
+        localStorage.setItem("gender", data.gender);
+        localStorage.setItem("location", data.location);
+        localStorage.setItem("dateOfBirth", data.dateOfBirth);
+        localStorage.setItem("userPhoneNumber", data.phoneNumber);
+        localStorage.setItem("userEmail", data.email);
+        localStorage.setItem("bio", data.bio);
         if (data.profileImage) {
           localStorage.setItem("profileImage", data.profileImage);
+          // Update navbar profile picture by triggering storage event
+          window.dispatchEvent(new Event('profileImageChanged'));
         }
-        alert("Profile updated successfully!");
+        toast.success("Profile updated successfully!");
       } else {
-        alert("Failed to save profile. Please try again.");
+        const errorText = await response.text();
+        console.error("Save profile error:", response.status, errorText);
+        toast.error("Failed to save profile. Please try again.");
       }
     } catch (err) {
       console.error("Error saving profile:", err);
-      alert("Error saving profile. Please check your connection.");
+      toast.error("Error saving profile. Please check your connection.");
     }
   };
 
@@ -220,18 +324,57 @@ const Profile = () => {
     });
   };
 
-  const handlePasswordSubmit = () => {
-    if (passwordData.newPassword && passwordData.newPassword === passwordData.confirmPassword) {
-      console.log("Password changed successfully");
-      setShowPasswordChange(false);
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
+  const handlePasswordSubmit = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error("All password fields are required!");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Passwords do not match!");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters!");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required!");
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/users/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
       });
-      alert("Password changed successfully!");
-    } else {
-      alert("Passwords do not match!");
+
+      if (response.ok) {
+        toast.success("Password changed successfully!");
+        setShowPasswordChange(false);
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        const error = await response.json();
+        toast.error(error.message || "Failed to change password");
+      }
+    } catch (err) {
+      console.error("Error changing password:", err);
+      toast.error("Error changing password. Please check your connection.");
     }
   };
 
@@ -240,39 +383,59 @@ const Profile = () => {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file');
+        toast.warning('Please select a valid image file');
         return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
+        toast.warning('Image size must be less than 5MB');
         return;
       }
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        const imageData = e.target.result;
-        setEditedData({
-          ...editedData,
-          profileImage: imageData,
-        });
-        // Store in localStorage temporarily for preview
-        localStorage.setItem("profileImage", imageData);
+        // Compress image before storing
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Scale down if too large
+          const maxWidth = 400;
+          const maxHeight = 400;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = width * ratio;
+            height = height * ratio;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to JPEG with quality 0.7
+          const compressedData = canvas.toDataURL('image/jpeg', 0.7);
+          setEditedData({
+            ...editedData,
+            profileImage: compressedData,
+          });
+          // Store in localStorage for preview
+          localStorage.setItem("profileImage", compressedData);
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleBackClick = () => {
-    navigate("/dashboard");
-  };
-
   const styles = {
     container: {
       minHeight: "100vh",
-      background: "#f8f9fa",
-      padding: "clamp(15px, 4vw, 30px)",
+      background: "#f5f5f5",
+      padding: "30px",
       boxSizing: "border-box",
     },
     headerContainer: {
@@ -284,30 +447,37 @@ const Profile = () => {
       gap: "15px",
     },
     title: {
-      fontSize: "clamp(1.5rem, 5vw, 2rem)",
+      fontSize: "2rem",
       fontWeight: "700",
       color: "#1a1a1a",
+      margin: 0,
     },
-    backButton: {
-      padding: "10px 20px",
-      background: "#f0f0f0",
-      color: "#666",
-      border: "1px solid #ddd",
+    successMessage: {
+      background: "#10b981",
+      color: "#fff",
+      padding: "12px 20px",
       borderRadius: "6px",
-      fontSize: "14px",
-      fontWeight: "600",
+      marginBottom: "20px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    successClose: {
+      background: "none",
+      border: "none",
+      color: "#fff",
+      fontSize: "20px",
       cursor: "pointer",
-      transition: "all 0.3s ease",
     },
     profileCard: {
       background: "#fff",
       borderRadius: "12px",
-      padding: "clamp(15px, 4vw, 30px)",
+      padding: "30px",
       marginBottom: "30px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
       display: "flex",
       alignItems: "center",
-      gap: "clamp(12px, 3vw, 20px)",
+      gap: "30px",
       flexWrap: "wrap",
       boxSizing: "border-box",
     },
@@ -316,11 +486,11 @@ const Profile = () => {
       display: "inline-block",
     },
     profileImage: {
-      width: "clamp(70px, 20vw, 100px)",
-      height: "clamp(70px, 20vw, 100px)",
+      width: "120px",
+      height: "120px",
       borderRadius: "50%",
       objectFit: "cover",
-      border: "3px solid #3B82F6",
+      border: "4px solid #3B82F6",
       cursor: "pointer",
     },
     imageUploadLabel: {
@@ -329,14 +499,14 @@ const Profile = () => {
       right: "0",
       background: "#3B82F6",
       color: "#fff",
-      width: "32px",
-      height: "32px",
+      width: "36px",
+      height: "36px",
       borderRadius: "50%",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      fontSize: "16px",
+      fontSize: "18px",
       border: "2px solid #fff",
       opacity: isEditing ? 1 : 0,
       pointerEvents: isEditing ? "auto" : "none",
@@ -344,29 +514,39 @@ const Profile = () => {
     },
     profileInfo: {
       flex: 1,
-      minWidth: "200px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "250px",
     },
     profileName: {
-      fontSize: "clamp(1.3rem, 4vw, 1.5rem)",
+      fontSize: "1.8rem",
       fontWeight: "700",
       color: "#1a1a1a",
-      margin: "0 0 5px 0",
+      margin: "0 0 0 0",
     },
     profileMeta: {
       display: "flex",
-      gap: "15px",
+      gap: "8px",
       alignItems: "center",
-      flexWrap: "wrap",
+      justifyContent: "center",
       color: "#666",
-      fontSize: "14px",
+      fontSize: "0.9rem",
+      fontWeight: "500",
+      marginTop: "12px",
+      paddingTop: "12px",
+      borderTop: "1px solid #f0f0f0",
+      width: "100%",
+      marginTop: "4px",
     },
     editButton: {
-      padding: "10px 24px",
+      padding: "12px 28px",
       background: "#fff",
       color: "#3B82F6",
-      border: "1.5px solid #3B82F6",
+      border: "2px solid #3B82F6",
       borderRadius: "6px",
-      fontSize: "14px",
+      fontSize: "0.95rem",
       fontWeight: "600",
       cursor: "pointer",
       transition: "all 0.3s ease",
@@ -383,40 +563,40 @@ const Profile = () => {
       boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
     },
     sectionTitle: {
-      fontSize: "18px",
+      fontSize: "1.1rem",
       fontWeight: "700",
       color: "#1a1a1a",
-      marginBottom: "20px",
+      marginBottom: "25px",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
     },
     infoGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-      gap: "25px",
+      gridTemplateColumns: "repeat(2, 1fr)",
+      gap: "30px",
     },
     infoItem: {
       display: "flex",
       flexDirection: "column",
     },
     infoLabel: {
-      fontSize: "12px",
+      fontSize: "0.75rem",
       color: "#999",
-      fontWeight: "600",
+      fontWeight: "700",
       marginBottom: "8px",
       textTransform: "uppercase",
       letterSpacing: "0.5px",
     },
     infoValue: {
-      fontSize: "14px",
+      fontSize: "0.95rem",
       color: "#1a1a1a",
       fontWeight: "500",
     },
     infoInput: {
-      fontSize: "14px",
+      fontSize: "0.95rem",
       color: "#1a1a1a",
-      padding: "10px 12px",
+      padding: "12px 14px",
       border: "1px solid #ddd",
       borderRadius: "6px",
       width: "100%",
@@ -427,23 +607,23 @@ const Profile = () => {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      padding: "15px 0",
+      padding: "18px 0",
       borderBottom: "1px solid #eee",
       gap: "15px",
       flexWrap: "wrap",
     },
     settingsLabel: {
-      fontSize: "14px",
+      fontSize: "0.95rem",
       fontWeight: "600",
       color: "#1a1a1a",
     },
     button: {
-      padding: "10px 20px",
+      padding: "12px 24px",
       background: "#3B82F6",
       color: "#fff",
       border: "none",
       borderRadius: "6px",
-      fontSize: "14px",
+      fontSize: "0.95rem",
       fontWeight: "600",
       cursor: "pointer",
       transition: "all 0.3s ease",
@@ -480,19 +660,41 @@ const Profile = () => {
       padding: "15px 0",
     },
     passwordInput: {
-      padding: "10px 12px",
+      padding: "12px 14px",
       border: "1px solid #ddd",
       borderRadius: "6px",
-      fontSize: "14px",
+      fontSize: "0.95rem",
       fontFamily: "inherit",
     },
   };
 
   return (
     <div style={styles.container}>
-      <div style={styles.headerContainer}>
+      <div style={{ ...styles.headerContainer, justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={styles.title}>My Profile</h1>
-        <button style={styles.backButton} onClick={handleBackClick}>
+        <button
+          onClick={() => navigate("/dashboard")}
+          style={{
+            background: "#f0f0f0",
+            border: "1px solid #ddd",
+            padding: "10px 20px",
+            borderRadius: "6px",
+            fontSize: "0.95rem",
+            fontWeight: "500",
+            cursor: "pointer",
+            color: "#666",
+            transition: "all 0.3s ease",
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = "#e0e0e0";
+            e.target.style.color = "#333";
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = "#f0f0f0";
+            e.target.style.color = "#666";
+          }}
+          title="Back to Dashboard"
+        >
           ← Back to Dashboard
         </button>
       </div>
@@ -501,7 +703,7 @@ const Profile = () => {
       <div style={styles.profileCard}>
         <div style={styles.profileImageContainer}>
           <img
-            src={isEditing ? (editedData.profileImage || "https://via.placeholder.com/100?text=Profile") : (profileData.profileImage || "https://via.placeholder.com/100?text=Profile")}
+            src={isEditing ? (editedData.profileImage || "https://via.placeholder.com/120?text=Profile") : (profileData.profileImage || "https://via.placeholder.com/120?text=Profile")}
             alt="Profile"
             style={styles.profileImage}
           />
@@ -550,7 +752,7 @@ const Profile = () => {
         </div>
         <div style={styles.infoGrid}>
           <div style={styles.infoItem}>
-            <label style={styles.infoLabel}>Name</label>
+            <label style={styles.infoLabel}>NAME</label>
             {isEditing ? (
               <input
                 style={styles.infoInput}
@@ -558,31 +760,36 @@ const Profile = () => {
                 onChange={(e) => handleInputChange("name", e.target.value)}
               />
             ) : (
-              <div style={styles.infoValue}>{profileData.name || "Should be fetched from database"}</div>
+              <div style={styles.infoValue}>{profileData.name}</div>
             )}
           </div>
 
           <div style={styles.infoItem}>
-            <label style={styles.infoLabel}>Date Of Birth</label>
+            <label style={styles.infoLabel}>DATE OF BIRTH</label>
             {isEditing ? (
               <input
                 style={styles.infoInput}
-                value={editedData.dateOfBirth}
-                onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                placeholder="DD/MM/YYYY or YYYY-MM-DD"
+                type="date"
+                value={formatDateForInput(editedData.dateOfBirth)}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const displayFormat = formatDateForDisplay(e.target.value);
+                    handleInputChange("dateOfBirth", displayFormat);
+                  }
+                }}
               />
             ) : (
-              <div style={styles.infoValue}>{profileData.dateOfBirth || "Should be fetched from database"}</div>
+              <div style={styles.infoValue}>{profileData.dateOfBirth}</div>
             )}
           </div>
 
           <div style={styles.infoItem}>
-            <label style={styles.infoLabel}>Age</label>
-            <div style={styles.infoValue}>{editedData.age || profileData.age || "Should be converted from dob"}</div>
+            <label style={styles.infoLabel}>AGE</label>
+            <div style={styles.infoValue}>{editedData.age || profileData.age}</div>
           </div>
 
           <div style={styles.infoItem}>
-            <label style={styles.infoLabel}>Phone Number</label>
+            <label style={styles.infoLabel}>PHONE NUMBER</label>
             {isEditing ? (
               <input
                 style={styles.infoInput}
@@ -590,12 +797,12 @@ const Profile = () => {
                 onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
               />
             ) : (
-              <div style={styles.infoValue}>{profileData.phoneNumber || "Should be fetched from database"}</div>
+              <div style={styles.infoValue}>{profileData.phoneNumber}</div>
             )}
           </div>
 
           <div style={styles.infoItem}>
-            <label style={styles.infoLabel}>Email Address</label>
+            <label style={styles.infoLabel}>EMAIL ADDRESS</label>
             {isEditing ? (
               <input
                 style={styles.infoInput}
@@ -604,12 +811,12 @@ const Profile = () => {
                 onChange={(e) => handleInputChange("email", e.target.value)}
               />
             ) : (
-              <div style={styles.infoValue}>{profileData.email || "Should be fetched from database"}</div>
+              <div style={styles.infoValue}>{profileData.email}</div>
             )}
           </div>
 
           <div style={styles.infoItem}>
-            <label style={styles.infoLabel}>Bio</label>
+            <label style={styles.infoLabel}>BIO</label>
             {isEditing ? (
               <input
                 style={styles.infoInput}
@@ -618,7 +825,7 @@ const Profile = () => {
                 placeholder="Patient bio"
               />
             ) : (
-              <div style={styles.infoValue}>{profileData.bio || "Patient"}</div>
+              <div style={styles.infoValue}>{profileData.bio}</div>
             )}
           </div>
         </div>

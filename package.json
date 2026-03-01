@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "cd backend && npm test",
+    "test:watch": "cd backend && npm run test:watch",
+    "test:coverage": "cd backend && npm run test:coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,28 +7,10 @@ import { registerSchema } from "./schema/register.schema";
 import { API_URL } from "../../utils/api";
 import doctorImage from "../../images/docter1.png";
 
-// Load reCAPTCHA script
-const loadRecaptchaScript = () => {
-  return new Promise((resolve) => {
-    if (window.grecaptcha) {
-      resolve();
-      return;
-    }
-    
-    const script = document.createElement('script');
-    script.src = 'https://www.google.com/recaptcha/api.js';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    document.head.appendChild(script);
-  });
-};
-
 const Register = () => {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [countryCode, setCountryCode] = useState("+977");
@@ -69,22 +51,78 @@ const Register = () => {
 
   const password = watch("password");
   const phoneNumber = watch("phoneNumber");
+  const agreeToTerms = watch("agreeToTerms");
 
-  // Load reCAPTCHA script on mount
-  useEffect(() => {
-    loadRecaptchaScript().then(() => {
-      setRecaptchaLoaded(true);
-      if (window.grecaptcha) {
-        window.grecaptcha.ready(() => {
-          window.grecaptcha.render("recaptcha-container", {
-            sitekey: RECAPTCHA_SITE_KEY,
-            callback: onRecaptchaChange,
-            theme: "light",
-          });
+  // Callback for reCAPTCHA
+  const onRecaptchaChange = useCallback((token) => {
+    setRecaptchaToken(token);
+    setMessage("");
+  }, []);
+
+  const renderRecaptcha = useCallback(() => {
+    const container = document.getElementById("recaptcha-container");
+    if (!container) {
+      console.warn("recaptcha-container not found");
+      return;
+    }
+
+    // Only render if container is empty
+    if (container.children.length > 0) {
+      console.log("reCAPTCHA already rendered");
+      return;
+    }
+
+    if (!window.grecaptcha) {
+      console.warn("grecaptcha not available yet");
+      return;
+    }
+
+    window.grecaptcha.ready(() => {
+      try {
+        window.grecaptcha.render("recaptcha-container", {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: onRecaptchaChange,
+          theme: "light",
         });
+        console.log("reCAPTCHA rendered successfully");
+      } catch (error) {
+        console.error("Error rendering reCAPTCHA:", error);
       }
     });
-  }, []);
+  }, [RECAPTCHA_SITE_KEY, onRecaptchaChange]);
+
+  // Load and render reCAPTCHA when terms are agreed
+  useEffect(() => {
+    if (!agreeToTerms) {
+      // Reset reCAPTCHA if user unchecks terms
+      const container = document.getElementById("recaptcha-container");
+      if (container) {
+        container.innerHTML = '';
+      }
+      setRecaptchaToken("");
+      return;
+    }
+
+    // Load script if not already loaded
+    if (!window.grecaptcha) {
+      const script = document.createElement('script');
+      script.src = 'https://www.google.com/recaptcha/api.js';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+      
+      script.onload = () => {
+        setTimeout(() => {
+          renderRecaptcha();
+        }, 100);
+      };
+    } else {
+      // Script already loaded, just render
+      setTimeout(() => {
+        renderRecaptcha();
+      }, 100);
+    }
+  }, [agreeToTerms, renderRecaptcha]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -107,11 +145,6 @@ const Register = () => {
       setPasswordRequirements(requirements);
     }
   }, [password]);
-
-  const onRecaptchaChange = (token) => {
-    setRecaptchaToken(token);
-    setMessage("");
-  };
 
   const onSubmit = async (data) => {
     // Check reCAPTCHA
@@ -210,11 +243,9 @@ const Register = () => {
       <div style={styles.formSection}>
         <button style={styles.closeButton} onClick={() => navigate("/")} title="Close">✕</button>
         <div style={styles.formContainer}>
-          <h2 style={styles.title}><center>Create Account</center></h2>
-          <p style={styles.subtitle}>
-            <center>
-              Already have an account? <Link to="/login" style={styles.loginLink}>Log in</Link>
-            </center>
+          <h2 style={{...styles.title, textAlign: 'center'}}>Create Account</h2>
+          <p style={{...styles.subtitle, textAlign: 'center'}}>
+            Already have an account? <Link to="/login" style={styles.loginLink}>Log in</Link>
           </p>
 
           {message && <div style={styles.successMessage}>{message}</div>}
@@ -255,6 +286,9 @@ const Register = () => {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Phone Number</label>
+              <p style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>
+                Enter 10 digits (starting with 9): 9XXXXXXXXX
+              </p>
               <div style={styles.phoneContainer}>
                 <select 
                   value={countryCode} 
@@ -277,9 +311,13 @@ const Register = () => {
                   }}
                 />
               </div>
-              {errors.phoneNumber && (
-                <span style={styles.errorText}>{errors.phoneNumber.message}</span>
-              )}
+              {phoneNumber && phoneNumber.length === 10 ? (
+                <span style={{ color: "#28a745", fontSize: "14px", marginTop: "5px", display: "block", fontWeight: "500" }}>
+                  ✓ Phone number verified
+                </span>
+              ) : phoneNumber && phoneNumber.length < 10 ? (
+                <span style={styles.errorText}>{errors.phoneNumber?.message || "Phone number must be 10 digits"}</span>
+              ) : null}
             </div>
 
             <div style={styles.formGroup}>

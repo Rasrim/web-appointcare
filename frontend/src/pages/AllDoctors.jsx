@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import HomeNavbar from "../../components/shared/HomeNavbar";
-import Navbar from "../../components/shared/Navbar";
-import HomeFooter from "../../components/shared/HomeFooter";
+import { API_URL } from "../utils/api";
+import HomeNavbar from "../components/HomeNavbar";
+import Navbar from "../components/Navbar";
+import HomeFooter from "../components/HomeFooter";
+import doctorImage from "../images/doctor1.png";
 import { FaSearch, FaMapMarkerAlt, FaStar, FaArrowLeft } from "react-icons/fa";
+import useDoctorSync from "../hooks/useDoctorSync";
 
 const AllDoctors = () => {
   const navigate = useNavigate();
@@ -16,37 +19,9 @@ const AllDoctors = () => {
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
   const [specialties, setSpecialties] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
-    fetchDoctors();
-  }, []);
-
-  useEffect(() => {
-    filterDoctors();
-  }, [doctors, searchQuery, selectedSpecialty]);
-
-  const fetchDoctors = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("http://localhost:3000/api/doctors");
-      if (!response.ok) throw new Error("Failed to fetch doctors");
-      const data = await response.json();
-      setDoctors(data || []);
-      
-      const uniqueSpecialties = [...new Set(data?.map((d) => d.specialization))].filter(Boolean);
-      setSpecialties(uniqueSpecialties);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-      console.error("Error fetching doctors:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterDoctors = () => {
+  const filterDoctorsFunction = useCallback(() => {
     let filtered = doctors;
 
     if (searchQuery) {
@@ -60,130 +35,336 @@ const AllDoctors = () => {
     }
 
     if (selectedSpecialty) {
-      filtered = filtered.filter((d) => d.specialization === selectedSpecialty);
+      filtered = filtered.filter((d) => (d.specialty || d.specialization) === selectedSpecialty);
     }
 
     setFilteredDoctors(filtered);
-  };
+  }, [doctors, searchQuery, selectedSpecialty]);
 
-  const handleBookAppointment = (doctorId) => {
+  useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
+    setIsLoggedIn(!!token);
+    fetchDoctors();
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    filterDoctorsFunction();
+  }, [filterDoctorsFunction]);
+
+  // Sync doctors when admin updates them
+  useDoctorSync(fetchDoctors);
+
+  const fetchDoctors = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/doctors`);
+      if (!response.ok) throw new Error("Failed to fetch doctors");
+      const data = await response.json();
+      setDoctors(data || []);
+      
+      const uniqueSpecialties = [...new Set(data?.map((d) => d.specialty || d.specialization))].filter(Boolean);
+      setSpecialties(uniqueSpecialties);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching doctors:", err);
+    } finally {
+      setLoading(false);
     }
-    navigate(`/book-appointment/${doctorId}`);
   };
 
   const NavbarComponent = isLoggedIn ? Navbar : HomeNavbar;
 
+  const styles = {
+    container: {
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+    },
+    wrapper: {
+      flex: 1,
+      maxWidth: "1280px",
+      margin: "0 auto",
+      padding: "0 20px",
+      paddingTop: "80px",
+      width: "100%",
+      boxSizing: "border-box",
+    },
+    backButton: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      backgroundColor: "transparent",
+      border: "none",
+      color: "#3B82F6",
+      fontSize: "16px",
+      fontWeight: "600",
+      cursor: "pointer",
+      marginBottom: "32px",
+      padding: "8px",
+    },
+    headerSection: {
+      marginBottom: "40px",
+    },
+    title: {
+      fontSize: "36px",
+      fontWeight: "bold",
+      marginBottom: "20px",
+      color: "#1a1a1a",
+    },
+    description: {
+      fontSize: "18px",
+      color: "#4b5563",
+      marginBottom: "32px",
+    },
+    filterContainer: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+      gap: "16px",
+      marginBottom: "20px",
+    },
+    searchInputWrapper: {
+      position: "relative",
+      gridColumn: isMobile ? "1" : "span 3",
+    },
+    searchInput: {
+      width: "100%",
+      paddingLeft: "40px",
+      paddingRight: "16px",
+      paddingTop: "12px",
+      paddingBottom: "12px",
+      fontSize: "16px",
+      border: "2px solid #e5e7eb",
+      borderRadius: "8px",
+      outline: "none",
+      transition: "all 0.3s ease",
+      boxSizing: "border-box",
+    },
+    searchIcon: {
+      position: "absolute",
+      left: "12px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      color: "#9ca3af",
+      fontSize: "16px",
+      pointerEvents: "none",
+    },
+    selectFilter: {
+      paddingLeft: "16px",
+      paddingRight: "16px",
+      paddingTop: "12px",
+      paddingBottom: "12px",
+      fontSize: "16px",
+      border: "2px solid #e5e7eb",
+      borderRadius: "8px",
+      cursor: "pointer",
+      backgroundColor: "#ffffff",
+      outline: "none",
+      transition: "all 0.3s ease",
+      boxSizing: "border-box",
+    },
+    clearButton: {
+      paddingLeft: "16px",
+      paddingRight: "16px",
+      paddingTop: "8px",
+      paddingBottom: "8px",
+      backgroundColor: "#f3f4f6",
+      color: "#374151",
+      border: "1px solid #d1d5db",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "500",
+      transition: "all 0.3s ease",
+    },
+    loadingMessage: {
+      textAlign: "center",
+      paddingTop: "64px",
+      paddingBottom: "64px",
+      fontSize: "18px",
+      color: "#4b5563",
+    },
+    errorMessage: {
+      backgroundColor: "#fee2e2",
+      color: "#b91c1c",
+      padding: "16px",
+      borderRadius: "8px",
+      marginBottom: "20px",
+      borderLeft: "4px solid #dc2626",
+    },
+    errorStrong: {
+      fontWeight: "bold",
+    },
+    emptyState: {
+      textAlign: "center",
+      paddingTop: "64px",
+      paddingBottom: "64px",
+      backgroundColor: "#f9fafb",
+      borderRadius: "8px",
+      border: "2px dashed #e5e7eb",
+    },
+    emptyIcon: {
+      fontSize: "48px",
+      color: "#d1d5db",
+      marginBottom: "12px",
+    },
+    emptyText: {
+      fontSize: "18px",
+      color: "#4b5563",
+    },
+    resultsInfo: {
+      fontSize: "14px",
+      color: "#4b5563",
+      marginBottom: "20px",
+    },
+    resultsBold: {
+      fontWeight: "bold",
+    },
+    doctorsGrid: {
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : window.innerWidth < 1024 ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
+      gap: "24px",
+    },
+    doctorCard: {
+      backgroundColor: "#ffffff",
+      border: "1px solid #e5e7eb",
+      borderRadius: "12px",
+      padding: "20px",
+      textAlign: "center",
+      boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+      transition: "all 0.3s ease",
+    },
+    doctorImage: {
+      width: "112px",
+      height: "112px",
+      margin: "0 auto 16px",
+      borderRadius: "50%",
+      overflow: "hidden",
+      border: "4px solid #3B82F6",
+    },
+    doctorImageTag: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    },
+    doctorName: {
+      fontSize: "20px",
+      fontWeight: "bold",
+      color: "#1a1a1a",
+      marginBottom: "4px",
+    },
+    doctorSpecialty: {
+      color: "#3B82F6",
+      fontWeight: "600",
+      marginBottom: "4px",
+      fontSize: "14px",
+    },
+    doctorTitle: {
+      color: "#6b7280",
+      fontSize: "14px",
+      marginBottom: "16px",
+    },
+    doctorDetails: {
+      display: "flex",
+      justifyContent: "center",
+      gap: "20px",
+      marginBottom: "16px",
+      paddingBottom: "16px",
+      borderBottom: "1px solid #e5e7eb",
+      flexWrap: "wrap",
+    },
+    doctorDetail: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      fontSize: "14px",
+      color: "#4b5563",
+    },
+    doctorTiming: {
+      display: "flex",
+      justifyContent: "center",
+      gap: "8px",
+      marginBottom: "16px",
+      flexWrap: "wrap",
+      alignItems: "center",
+    },
+    doctorTimingText: {
+      fontSize: "14px",
+      color: "#4b5563",
+    },
+    doctorTimingSmall: {
+      fontSize: "12px",
+      color: "#6b7280",
+    },
+    bookButton: {
+      width: "100%",
+      paddingTop: "8px",
+      paddingBottom: "8px",
+      backgroundColor: "#3B82F6",
+      color: "#ffffff",
+      border: "none",
+      borderRadius: "6px",
+      fontSize: "16px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+    },
+  };
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={styles.container}>
       <NavbarComponent />
-      <div
-        style={{
-          flex: 1,
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "40px 20px",
-          paddingTop: "120px",
-          width: "100%",
-        }}
-      >
+      <div style={styles.wrapper}>
         <button
-          onClick={() => navigate(-1)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "none",
-            border: "none",
-            color: "#3B82F6",
-            fontSize: "1rem",
-            fontWeight: "500",
-            cursor: "pointer",
-            marginBottom: "30px",
-            padding: "8px 0",
-          }}
+          onClick={() => navigate("/")}
+          style={styles.backButton}
+          onMouseOver={(e) => e.target.style.color = "#2563EB"}
+          onMouseOut={(e) => e.target.style.color = "#3B82F6"}
         >
           <FaArrowLeft /> Back
         </button>
 
-        <div style={{ marginBottom: "40px" }}>
-          <h1 style={{ fontSize: "2.5rem", marginBottom: "20px", color: "#1a1a1a" }}>
-            Find a Doctor
-          </h1>
-          <p style={{ fontSize: "1.1rem", color: "#666", marginBottom: "30px" }}>
+        <div style={styles.headerSection}>
+          <h1 style={styles.title}>Find a Doctor</h1>
+          <p style={styles.description}>
             Search and filter doctors by name, specialization, or location
           </p>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: "15px",
-              marginBottom: "20px",
-              "@media (max-width: 768px)": {
-                gridTemplateColumns: "1fr",
-              },
-            }}
-          >
-            <div style={{ display: "flex", gap: "10px" }}>
-              <div style={{ flex: 1, position: "relative" }}>
-                <input
-                  type="text"
-                  placeholder="Search by doctor name, specialty, or location..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "12px 15px 12px 40px",
-                    fontSize: "1rem",
-                    border: "2px solid #E5E7EB",
-                    borderRadius: "8px",
-                    boxSizing: "border-box",
-                    transition: "all 0.3s",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#3B82F6";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#E5E7EB";
-                    e.target.style.boxShadow = "none";
-                  }}
-                />
-                <FaSearch
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#9CA3AF",
-                    fontSize: "1rem",
-                  }}
-                />
-              </div>
+          <div style={styles.filterContainer}>
+            <div style={styles.searchInputWrapper}>
+              <input
+                type="text"
+                placeholder="Search by doctor name, specialty, or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.searchInput}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "#3B82F6";
+                  e.target.style.boxShadow = "0 0 0 2px rgba(59, 130, 246, 0.1)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "#e5e7eb";
+                  e.target.style.boxShadow = "none";
+                }}
+              />
+              <FaSearch style={styles.searchIcon} />
             </div>
 
             <select
               value={selectedSpecialty}
               onChange={(e) => setSelectedSpecialty(e.target.value)}
-              style={{
-                padding: "12px 15px",
-                fontSize: "1rem",
-                border: "2px solid #E5E7EB",
-                borderRadius: "8px",
-                cursor: "pointer",
-                backgroundColor: "white",
-                minWidth: "200px",
-                transition: "all 0.3s",
-              }}
+              style={styles.selectFilter}
               onFocus={(e) => {
                 e.target.style.borderColor = "#3B82F6";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#E5E7EB";
+                e.target.style.borderColor = "#e5e7eb";
               }}
             >
               <option value="">All Specialties</option>
@@ -201,16 +382,9 @@ const AllDoctors = () => {
                 setSearchQuery("");
                 setSelectedSpecialty("");
               }}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#F3F4F6",
-                color: "#6B7280",
-                border: "1px solid #D1D5DB",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: "500",
-              }}
+              style={styles.clearButton}
+              onMouseOver={(e) => e.target.style.backgroundColor = "#e5e7eb"}
+              onMouseOut={(e) => e.target.style.backgroundColor = "#f3f4f6"}
             >
               Clear filters
             </button>
@@ -218,38 +392,21 @@ const AllDoctors = () => {
         </div>
 
         {loading && (
-          <div style={{ textAlign: "center", padding: "60px 20px" }}>
-            <p style={{ fontSize: "1.1rem", color: "#666" }}>Loading doctors...</p>
+          <div style={styles.loadingMessage}>
+            <p>Loading doctors...</p>
           </div>
         )}
 
         {error && (
-          <div
-            style={{
-              backgroundColor: "#FEE2E2",
-              color: "#DC2626",
-              padding: "15px 20px",
-              borderRadius: "8px",
-              marginBottom: "20px",
-              borderLeft: "4px solid #DC2626",
-            }}
-          >
-            <strong>Error:</strong> {error}
+          <div style={styles.errorMessage}>
+            <strong style={styles.errorStrong}>Error:</strong> {error}
           </div>
         )}
 
         {!loading && filteredDoctors.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 20px",
-              backgroundColor: "#F9FAFB",
-              borderRadius: "8px",
-              border: "2px dashed #D1D5DB",
-            }}
-          >
-            <FaSearch style={{ fontSize: "3rem", color: "#D1D5DB", marginBottom: "10px" }} />
-            <p style={{ fontSize: "1.1rem", color: "#6B7280" }}>
+          <div style={styles.emptyState}>
+            <FaSearch style={styles.emptyIcon} />
+            <p style={styles.emptyText}>
               {doctors.length === 0
                 ? "No doctors available"
                 : "No doctors match your search criteria"}
@@ -259,138 +416,67 @@ const AllDoctors = () => {
 
         {!loading && filteredDoctors.length > 0 && (
           <div>
-            <p style={{ fontSize: "0.95rem", color: "#6B7280", marginBottom: "20px" }}>
-              Found <strong>{filteredDoctors.length}</strong> doctor(s)
+            <p style={styles.resultsInfo}>
+              Found <span style={styles.resultsBold}>{filteredDoctors.length}</span> doctor(s)
             </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                gap: "20px",
-              }}
-            >
+            <div style={styles.doctorsGrid}>
               {filteredDoctors.map((doctor) => (
                 <div
                   key={doctor.id}
-                  style={{
-                    backgroundColor: "white",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                    border: "1px solid #E5E7EB",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    transition: "all 0.3s ease",
-                    display: "flex",
-                    flexDirection: "column",
+                  style={styles.doctorCard}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 10px 25px rgba(0,0,0,0.15)";
-                    e.currentTarget.style.transform = "translateY(-5px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
-                    e.currentTarget.style.transform = "translateY(0)";
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.boxShadow = "0 1px 2px 0 rgba(0, 0, 0, 0.05)";
                   }}
                 >
-                  {doctor.profileImage && (
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "200px",
-                        backgroundColor: "#F3F4F6",
-                        backgroundImage: `url(${doctor.profileImage})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
+                  <div style={styles.doctorImage}>
+                    <img 
+                      src={doctor.photo && doctor.photo.trim() ? `${API_URL}/uploads/${doctor.photo}` : doctorImage} 
+                      alt={doctor.name}
+                      style={styles.doctorImageTag}
+                      onError={(e) => {e.target.src = doctorImage}}
                     />
-                  )}
-
-                  <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column" }}>
-                    <h3 style={{ fontSize: "1.3rem", fontWeight: "600", marginBottom: "5px", color: "#1a1a1a" }}>
-                      {doctor.name}
-                    </h3>
-
-                    {doctor.specialization && (
-                      <p
-                        style={{
-                          fontSize: "0.95rem",
-                          color: "#3B82F6",
-                          fontWeight: "500",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        {doctor.specialization}
-                      </p>
-                    )}
-
-                    {doctor.rating && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "5px",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        <FaStar style={{ color: "#FBBF24", fontSize: "0.9rem" }} />
-                        <span style={{ fontSize: "0.9rem", color: "#666" }}>
-                          {doctor.rating}/5 ({doctor.reviews || 0} reviews)
-                        </span>
-                      </div>
-                    )}
-
-                    {doctor.location && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          color: "#666",
-                          fontSize: "0.9rem",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        <FaMapMarkerAlt style={{ color: "#EF4444" }} />
-                        {doctor.location}
-                      </div>
-                    )}
-
-                    {doctor.bio && (
-                      <p
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#666",
-                          marginBottom: "15px",
-                          flex: 1,
-                        }}
-                      >
-                        {doctor.bio}
-                      </p>
-                    )}
-
-                    <button
-                      onClick={() => handleBookAppointment(doctor.id)}
-                      style={{
-                        width: "100%",
-                        backgroundColor: "#3B82F6",
-                        color: "white",
-                        padding: "12px",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontWeight: "600",
-                        fontSize: "1rem",
-                        transition: "all 0.3s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = "#2563EB";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = "#3B82F6";
-                      }}
-                    >
-                      Book Appointment
-                    </button>
                   </div>
+                  <h3 style={styles.doctorName}>{doctor.name}</h3>
+                  <p style={styles.doctorSpecialty}>{doctor.specialty || doctor.specialization}</p>
+                  <p style={styles.doctorTitle}>Specialist | {doctor.experience || "5"} years experience</p>
+                  <div style={styles.doctorDetails}>
+                    <div style={styles.doctorDetail}>
+                      <span>📅</span>
+                      <span>{doctor.availability || "Tue, Thu"}</span>
+                    </div>
+                    <div style={styles.doctorDetail}>
+                      <span>₹</span>
+                      <span>{doctor.fee || "350"}</span>
+                    </div>
+                  </div>
+                  <div style={styles.doctorTiming}>
+                    <span style={styles.doctorTimingText}>{doctor.timing || "10:00 AM-01:00 PM"}</span>
+                    <span style={styles.doctorTimingSmall}>Starting</span>
+                  </div>
+                  <button
+                    style={styles.bookButton}
+                    onClick={() => {
+                      const token = localStorage.getItem("token");
+                      if (!token) {
+                        navigate("/login");
+                        return;
+                      }
+                      navigate('/book-appointment-details', { state: { doctor } });
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.backgroundColor = "#2563EB";
+                      e.target.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.backgroundColor = "#3B82F6";
+                      e.target.style.boxShadow = "none";
+                    }}
+                  >
+                    Book an appointment
+                  </button>
                 </div>
               ))}
             </div>

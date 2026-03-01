@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,18 +11,22 @@ import doctorImage from "../../images/docter1.png";
 
 const Register = () => {
   const navigate = useNavigate();
+  const formRef = useRef(null);
+  const errorRef = useRef(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [step, setStep] = useState("register"); // register, verification, success
+  const [step, setStep] = useState("register"); // register, recaptcha, success
   const [verificationEmail, setVerificationEmail] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
+  const [registrationData, setRegistrationData] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [countryCode, setCountryCode] = useState("+977");
   const [selectedGender, setSelectedGender] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [serverError, setServerError] = useState("");
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [recaptchaRendered, setRecaptchaRendered] = useState(false);
   const [passwordRequirements, setPasswordRequirements] = useState({
     minLength: false,
     hasCapital: false,
@@ -31,11 +35,14 @@ const Register = () => {
   });
   const [showRequirements, setShowRequirements] = useState(false);
 
+  const RECAPTCHA_SITE_KEY = process.env.VITE_RECAPTCHA_SITE_KEY || '6Lf6lFgsAAAAACyWkWW7dw5QxDmMDkFy2B0xPwo0';
+
   const {
     register,
     handleSubmit,
     formState: { errors, isValid },
     watch,
+    setValue,
   } = useForm({
     resolver: zodResolver(registerSchema),
     mode: "onChange",
@@ -53,6 +60,7 @@ const Register = () => {
 
   const password = watch("password");
   const phoneNumber = watch("phoneNumber");
+  const agreeToTerms = watch("agreeToTerms");
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,6 +69,97 @@ const Register = () => {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Load reCAPTCHA script when terms are agreed and form is valid
+  useEffect(() => {
+    if (agreeToTerms && recaptchaLoaded && !recaptchaRendered) {
+      renderRecaptcha();
+    }
+  }, [agreeToTerms, recaptchaLoaded, recaptchaRendered]);
+
+  // Also load script on mount to be ready
+  useEffect(() => {
+    if (!recaptchaLoaded) {
+      loadRecaptchaScript();
+    }
+  }, []);
+
+  const loadRecaptchaScript = () => {
+    if (window.grecaptcha) {
+      console.log("grecaptcha already loaded");
+      setRecaptchaLoaded(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://www.google.com/recaptcha/api.js";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      console.log("reCAPTCHA script loaded successfully");
+      setRecaptchaLoaded(true);
+    };
+    script.onerror = () => {
+      console.error("Failed to load reCAPTCHA script");
+    };
+    document.head.appendChild(script);
+  };
+
+  const renderRecaptcha = () => {
+    const container = document.getElementById("recaptcha-container");
+    console.log("renderRecaptcha called - grecaptcha:", !!window.grecaptcha, "container:", !!container, "recaptchaRendered:", recaptchaRendered);
+    
+    if (!window.grecaptcha) {
+      console.warn("grecaptcha not available yet");
+      return;
+    }
+    
+    if (!container) {
+      console.warn("recaptcha-container not found");
+      return;
+    }
+    
+    if (recaptchaRendered) {
+      console.log("reCAPTCHA already rendered");
+      return;
+    }
+
+    // Clear any existing content
+    container.innerHTML = '';
+    
+    window.grecaptcha.ready(() => {
+      try {
+        console.log("grecaptcha.ready - rendering with sitekey:", RECAPTCHA_SITE_KEY);
+        window.grecaptcha.render("recaptcha-container", {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: "onRecaptchaVerified",
+          theme: "light",
+        });
+        setRecaptchaRendered(true);
+        console.log("reCAPTCHA rendered successfully");
+      } catch (error) {
+        console.error("reCAPTCHA render error:", error);
+      }
+    });
+  };
+
+  const onRecaptchaVerified = (token) => {
+    console.log("reCAPTCHA verified with token:", token);
+    setRecaptchaToken(token);
+    setMessage("");
+  };
+
+  // Make callback available globally for reCAPTCHA - this MUST be updated on every render
+  useEffect(() => {
+    window.onRecaptchaVerified = (token) => {
+      console.log("Callback fired with token:", token);
+      setRecaptchaToken(token);
+      setMessage("");
+    };
+    return () => {
+      delete window.onRecaptchaVerified;
+    };
   }, []);
 
   // Validate password requirements
@@ -76,10 +175,96 @@ const Register = () => {
     }
   }, [password]);
 
+  // Scroll to error message when errors occur
+  useEffect(() => {
+    if (serverError && errorRef.current) {
+      setTimeout(() => {
+        errorRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
+  }, [serverError]);
+
   const onSubmit = async (data) => {
     // Check if trying to register with admin email
     if (data.email === "admin1245@gmail.com") {
       setServerError("This email is reserved for admin. Please use a different email to register.");
+      return;
+    }
+
+    // Phone number is already 10 digits (9XXXXXXXX where second digit is 8 or 7)
+    const fullPhoneNumber = data.phoneNumber;
+    
+    // Validate full phone number
+    if (fullPhoneNumber.length !== 10) {
+      setServerError(`Phone number must be exactly 10 digits. Currently: ${fullPhoneNumber.length}`);
+      return;
+    }
+    
+    if (!/^9[87]\d{8}$/.test(fullPhoneNumber)) {
+      setServerError("Phone must start with 9, second digit must be 8 or 7");
+      return;
+    }
+
+    // Get reCAPTCHA token
+    const token = window.grecaptcha.getResponse();
+    
+    if (!token) {
+      setServerError("Please complete the reCAPTCHA verification");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+    setServerError("");
+
+    try {
+      const payload = {
+        fullName: data.fullName,
+        email: data.email,
+        password: data.password,
+        phoneNumber: `+977${fullPhoneNumber}`,
+        gender: selectedGender,
+        birthDate: data.birthDate,
+        recaptchaToken: token,
+      };
+      
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setMessage("Account created successfully! Redirecting to login...");
+        localStorage.setItem("token", result.token);
+        localStorage.setItem("fullName", result.user.fullName);
+        localStorage.setItem("userEmail", result.user.email);
+        localStorage.setItem("userId", result.user.id);
+        localStorage.setItem("userPhoneNumber", payload.phoneNumber);
+        
+        setStep("success");
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      } else {
+        setServerError(result.message || "Registration failed. Please try again.");
+        setStep("register");
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      setServerError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecaptchaSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!recaptchaToken) {
+      setServerError("Please complete the reCAPTCHA verification");
       return;
     }
 
@@ -94,67 +279,29 @@ const Register = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fullName: data.fullName,
-          email: data.email,
-          password: data.password,
-          phoneNumber: `${countryCode}${data.phoneNumber}`,
-          gender: selectedGender,
-          birthDate: data.birthDate,
+          ...registrationData,
+          recaptchaToken: recaptchaToken,
         }),
       });
 
       const responseData = await response.json();
 
-      if (response.ok && responseData.requiresVerification) {
-        setVerificationEmail(data.email);
-        setStep("verification");
-        setMessage("Verification code sent to your email. Please check and enter it below.");
-      } else {
-        setServerError(responseData.message || "Registration failed");
-      }
-    } catch (err) {
-      setServerError("Error: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerificationSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!verificationCode || verificationCode.length !== 6) {
-      setServerError("Please enter a valid 6-digit code");
-      return;
-    }
-
-    setLoading(true);
-    setServerError("");
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/verify-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: verificationEmail,
-          verificationCode: verificationCode,
-        }),
-      });
-
-      const data = await response.json();
-
       if (response.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("fullName", data.user.fullName);
-        localStorage.setItem("userEmail", data.user.email);
+        // Store user data
+        localStorage.setItem("token", responseData.token);
+        localStorage.setItem("fullName", responseData.user.fullName);
+        localStorage.setItem("userEmail", responseData.user.email);
+        localStorage.setItem("userId", responseData.user.id);
+        
         setStep("success");
-        setMessage("Email verified successfully!");
+        setMessage("Registration successful! Redirecting to login...");
+        
+        // Redirect to login page after 2 seconds
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("/login");
         }, 2000);
       } else {
-        setServerError(data.message || "Verification failed");
+        setServerError(responseData.message || "Registration failed. Please try again.");
       }
     } catch (err) {
       setServerError("Error: " + err.message);
@@ -166,30 +313,16 @@ const Register = () => {
   const handleResendCode = async () => {
     setLoading(true);
     setServerError("");
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/resend-verification`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: verificationEmail,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage("New verification code sent to your email");
-      } else {
-        setServerError(data.message || "Failed to resend code");
-      }
-    } catch (err) {
-      setServerError("Error: " + err.message);
-    } finally {
-      setLoading(false);
+    setMessage("");
+    setRecaptchaToken("");
+    
+    // Reset reCAPTCHA
+    if (window.grecaptcha) {
+      window.grecaptcha.reset();
     }
+    
+    setLoading(false);
+    setMessage("reCAPTCHA has been reset. Please verify again.");
   };
 
   return (
@@ -233,18 +366,16 @@ const Register = () => {
       <div style={styles.formSection}>
         <button style={styles.closeButton} onClick={() => navigate("/")} title="Close">✕</button>
         <div style={styles.formContainer}>
-          <h2 style={styles.title}><center>Create Account</center></h2>
-          <p style={styles.subtitle}>
-            <center>
+          <h2 style={{...styles.title, textAlign: 'center'}}>Create Account</h2>
+          <p style={{...styles.subtitle, textAlign: 'center'}}>
             Already have an account? <Link to="/login" style={styles.loginLink}>Log in</Link>
-            </center>
           </p>
 
           {message && <div style={styles.successMessage}>{message}</div>}
-          {serverError && <div style={styles.errorMessage}>{serverError}</div>}
+          {serverError && <div ref={errorRef} style={styles.errorMessage}>{serverError}</div>}
 
           {step === "register" && (
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Full Name</label>
               <input
@@ -280,43 +411,59 @@ const Register = () => {
             <div style={styles.formGroup}>
               <label style={styles.label}>Phone Number</label>
               <div style={styles.phoneContainer}>
-                <select 
-                  value={countryCode} 
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  style={styles.countrySelect}
-                >
-                  <option value="+977">🇳🇵 +977</option>
-                  <option value="+91">🇮🇳 +91</option>
-                  <option value="+1">🇺🇸 +1</option>
-                  <option value="+44">🇬🇧 +44</option>
-                </select>
+                <div style={styles.countryCodeStatic}>
+                  +977
+                </div>
                 <input
                   type="tel"
-                  placeholder="1234567890"
+                  placeholder="98XXXXXXXX"
                   {...register("phoneNumber")}
                   maxLength="10"
+                  onChange={(e) => {
+                    // Allow only numbers
+                    let value = e.target.value.replace(/[^0-9]/g, '');
+                    
+                    // Validation: First digit must be 9, second digit must be 8 or 7
+                    if (value.length > 0 && value[0] !== '9') {
+                      value = '';
+                    } else if (value.length > 1 && !['8', '7'].includes(value[1])) {
+                      value = value[0]; // Keep only first digit
+                    }
+                    
+                    e.target.value = value;
+                    setValue('phoneNumber', value, { shouldValidate: true });
+                  }}
+                  onKeyPress={(e) => {
+                    if (!/[0-9]/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                   style={{
                     ...styles.phoneInput,
                     borderColor: errors.phoneNumber ? "#dc3545" : "#ddd",
+                    flex: 1,
+                    padding: "12px",
                   }}
                 />
               </div>
-              {errors.phoneNumber && (
-                <span style={styles.errorText}>{errors.phoneNumber.message}</span>
-              )}
-              {countryCode === "+977" && (
-                <div style={styles.phoneHelper}>
-                  <span style={{
-                    color: phoneNumber?.length === 10 ? "#28a745" : "#666",
-                    fontWeight: "500"
-                  }}>
-                    {phoneNumber?.length || 0}/10 digits
-                  </span>
-                  {phoneNumber?.length === 10 && (
-                    <span style={styles.validationIcon}>✓ Valid</span>
-                  )}
-                </div>
-              )}
+              {phoneNumber && phoneNumber.length === 10 ? (
+                <span style={{ color: "#28a745", fontSize: "14px", marginTop: "5px", display: "block", fontWeight: "500" }}>
+                  ✓ Phone number verified
+                </span>
+              ) : phoneNumber && phoneNumber.length < 10 ? (
+                <span style={styles.errorText}>{errors.phoneNumber?.message || "Phone must start with 9, second digit 8 or 7"}</span>
+              ) : null}
+              <div style={styles.phoneHelper}>
+                <span style={{
+                  color: phoneNumber?.length === 10 ? "#28a745" : "#666",
+                  fontWeight: "500"
+                }}>
+                  {phoneNumber?.length || 0}/10 digits
+                </span>
+                {phoneNumber?.length === 10 && (
+                  <span style={styles.validationIcon}>✓ Valid</span>
+                )}
+              </div>
             </div>
 
             <div style={styles.formGroup}>
@@ -324,7 +471,10 @@ const Register = () => {
               <div style={styles.genderContainer}>
                 <button
                   type="button"
-                  onClick={() => setSelectedGender("Male")}
+                  onClick={() => {
+                    setSelectedGender("Male");
+                    setValue("gender", "Male", { shouldValidate: true });
+                  }}
                   style={{
                     ...styles.genderButton,
                     backgroundColor: selectedGender === "Male" ? "#3B82F6" : "#f0f0f0",
@@ -336,7 +486,10 @@ const Register = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedGender("Female")}
+                  onClick={() => {
+                    setSelectedGender("Female");
+                    setValue("gender", "Female", { shouldValidate: true });
+                  }}
                   style={{
                     ...styles.genderButton,
                     backgroundColor: selectedGender === "Female" ? "#3B82F6" : "#f0f0f0",
@@ -348,7 +501,10 @@ const Register = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedGender("Other")}
+                  onClick={() => {
+                    setSelectedGender("Other");
+                    setValue("gender", "Other", { shouldValidate: true });
+                  }}
                   style={{
                     ...styles.genderButton,
                     backgroundColor: selectedGender === "Other" ? "#3B82F6" : "#f0f0f0",
@@ -481,70 +637,54 @@ const Register = () => {
               )}
             </div>
 
+            <div style={{...styles.recaptchaWrapper, display: agreeToTerms ? "block" : "none"}}>
+              <p style={{ marginBottom: "15px", color: "#666", fontSize: "14px" }}>
+                Please verify you're human:
+              </p>
+              <div id="recaptcha-container" style={{ pointerEvents: "auto", position: "relative", zIndex: 9999 }}></div>
+            </div>
+
             <button 
-              type="submit" 
+              type="submit"
+              onClick={(e) => {
+                console.log("Sign Up button clicked");
+                console.log("Current form errors:", errors);
+                console.log("Form values:", {
+                  fullName: watch("fullName"),
+                  email: watch("email"),
+                  phoneNumber: watch("phoneNumber"),
+                  password: watch("password"),
+                  confirmPassword: watch("confirmPassword"),
+                  birthDate: watch("birthDate"),
+                  agreeToTerms: watch("agreeToTerms"),
+                  recaptchaToken: recaptchaToken,
+                  loading,
+                });
+                if (loading || !recaptchaToken) {
+                  console.log("Button disabled - loading:", loading, "token:", !!recaptchaToken);
+                  e.preventDefault();
+                }
+              }}
               style={{
                 ...styles.button,
-                opacity: !isValid || loading ? 0.5 : 1,
-                cursor: !isValid || loading ? "not-allowed" : "pointer",
+                opacity: loading || !recaptchaToken ? 0.5 : 1,
+                cursor: loading || !recaptchaToken ? "not-allowed" : "pointer",
               }} 
-              disabled={!isValid || loading}
+              disabled={loading || !recaptchaToken}
             >
-              {loading ? "Creating Account..." : "Sign Up"}
+              {loading ? "Creating Account..." : recaptchaToken ? "Sign Up" : "Complete reCAPTCHA to continue"}
             </button>
-          </form>
-          )}
-
-          {step === "verification" && (
-          <form onSubmit={handleVerificationSubmit}>
-            <div style={styles.verificationContainer}>
-              <h3 style={styles.verificationTitle}>Verify Your Email</h3>
-              <p style={styles.verificationSubtitle}>
-                We've sent a 6-digit code to <strong>{verificationEmail}</strong>
-              </p>
-              
-              {message && <div style={styles.successMessage}>{message}</div>}
-              {serverError && <div style={styles.errorMessage}>{serverError}</div>}
-              
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Enter Verification Code</label>
-                <VerificationCodeInput 
-                  onCodeChange={setVerificationCode}
-                  length={6}
-                />
-              </div>
-
-              <button
-                type="submit"
-                style={{...styles.button, opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer"}}
-                disabled={loading || verificationCode.length !== 6}
-              >
-                {loading ? "Verifying..." : "Verify Code"}
-              </button>
-
-              <p style={styles.resendText}>
-                Didn't receive the code?{" "}
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  style={styles.resendLink}
-                  disabled={loading}
-                >
-                  Resend Code
-                </button>
-              </p>
-            </div>
           </form>
           )}
 
           {step === "success" && (
           <div style={styles.successContainer}>
             <div style={styles.successIcon}>✓</div>
-            <h3 style={styles.verificationTitle}>Email Verified!</h3>
+            <h3 style={styles.verificationTitle}>Registration Successful!</h3>
             <p style={styles.verificationSubtitle}>
-              Your account has been successfully activated.
+              Your account has been successfully created.
               <br />
-              Redirecting to dashboard...
+              Redirecting to login...
             </p>
           </div>
           )}
@@ -720,23 +860,44 @@ const styles = {
     alignItems: "center",
     flexWrap: "wrap",
   },
-  countrySelect: {
-    padding: "12px 8px",
-    border: "1px solid #ddd",
-    borderRadius: "6px",
-    fontSize: "clamp(0.8rem, 2vw, 0.9rem)",
-    backgroundColor: "#fff",
-    cursor: "pointer",
-    minWidth: "90px",
-  },
-  phoneInput: {
-    flex: 1,
-    minWidth: "150px",
+  countryCodeStatic: {
     padding: "12px 14px",
     border: "1px solid #ddd",
     borderRadius: "6px",
     fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+    backgroundColor: "#f9f9f9",
+    fontWeight: "600",
+    color: "#333",
+    minWidth: "100px",
+    textAlign: "center",
+  },
+  phoneInputWrapper: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    border: "1px solid #ddd",
+    borderRadius: "6px",
+    overflow: "hidden",
+    backgroundColor: "#f9f9f9",
+  },
+  phonePrefix: {
+    padding: "12px 8px",
+    fontWeight: "700",
+    color: "#333",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
+    backgroundColor: "#f0f0f0",
+    borderRight: "1px solid #ddd",
+    minWidth: "auto",
+  },
+  phoneInput: {
+    flex: 1,
+    minWidth: "100px",
+    padding: "12px 14px",
+    border: "none",
+    outline: "none",
+    fontSize: "clamp(0.85rem, 2vw, 0.95rem)",
     boxSizing: "border-box",
+    backgroundColor: "transparent",
   },
   genderContainer: {
     display: "flex",
@@ -931,6 +1092,17 @@ const styles = {
     textDecoration: "underline",
     padding: "0",
     transition: "color 0.3s",
+  },
+  recaptchaWrapper: {
+    display: "flex",
+    justifyContent: "center",
+    margin: "30px 0",
+    padding: "20px",
+    backgroundColor: "#f9f9f9",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    pointerEvents: "auto",
+    zIndex: 9999,
   },
   successContainer: {
     textAlign: "center",

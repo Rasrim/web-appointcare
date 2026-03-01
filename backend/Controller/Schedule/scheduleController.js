@@ -1,7 +1,9 @@
 const Schedule = require("../../models/scheduleModel");
 const Appointment = require("../../models/appointmentModel");
 const Doctor = require("../../models/doctorModel");
+const User = require("../../models/userModel");
 const logger = require("../../utils/logger");
+const { sendAppointmentConfirmationEmail } = require("../../config/email");
 
 // Get doctor's schedule
 exports.getDoctorSchedule = async (req, res) => {
@@ -304,6 +306,24 @@ exports.bookAppointment = async (req, res) => {
       });
     }
 
+    // Get user details for email
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Get doctor details for email
+    const doctor = await Doctor.findByPk(doctorId);
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found",
+      });
+    }
+
     // Create appointment
     const appointment = await Appointment.create({
       userId,
@@ -315,6 +335,22 @@ exports.bookAppointment = async (req, res) => {
     });
 
     logger.info(`Appointment booked successfully: ${appointment.id}`);
+
+    // Send confirmation email (non-blocking - don't fail if email fails)
+    try {
+      await sendAppointmentConfirmationEmail(user.email, {
+        doctorName: doctor.full_name || doctor.name,
+        date: appointmentDate,
+        time: appointmentTime,
+        specialization: doctor.specialization || doctor.specialty,
+        fee: doctor.consultationFee || doctor.fee || 500,
+        patientName: user.full_name || user.name,
+      });
+      logger.info(`Confirmation email sent to ${user.email}`);
+    } catch (emailError) {
+      logger.error(`Failed to send confirmation email: ${emailError.message}`);
+      // Don't fail the appointment booking if email fails
+    }
 
     res.status(201).json({
       success: true,

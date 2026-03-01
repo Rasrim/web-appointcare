@@ -80,7 +80,7 @@ const SymptomsSection = () => {
   ];
 
   const itemsPerSlide = 5;
-  const totalSlides = symptoms.length - itemsPerSlide + 1;
+  const totalSlides = Math.max(symptoms.length - itemsPerSlide + 1, 1);
 
   const handleNext = () => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
@@ -92,6 +92,7 @@ const SymptomsSection = () => {
 
   const handleSymptomClick = (symptomName) => {
     const routeName = symptomName.toLowerCase().replace(/ /g, "-");
+    window.scrollTo({ top: 0, behavior: "smooth" });
     navigate(`/symptom/${routeName}`);
   };
 
@@ -143,14 +144,18 @@ const SymptomsSection = () => {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      transition: "all 0.3s ease",
+      transition: "background-color 0.3s ease",
       boxShadow: "0 4px 12px rgba(75, 123, 255, 0.3)",
       flexShrink: 0,
       position: "absolute",
+      top: "50%",
+      transform: "translateY(-50%)",
+      zIndex: 10,
+      padding: 0,
+      lineHeight: 1,
     },
     sliderButtonHover: {
       backgroundColor: "#3a62d9",
-      transform: "scale(1.1)",
     },
 symptomsGrid: {
   display: "flex",
@@ -218,12 +223,13 @@ symptomCard: {
 
         <div style={styles.symptomsSlider}>
           <button
-            style={styles.sliderButton}
+            style={{ ...styles.sliderButton, left: "0" }}
             onClick={handlePrev}
-            onMouseEnter={(e) => Object.assign(e.target.style, styles.sliderButtonHover)}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#3a62d9";
+            }}
             onMouseLeave={(e) => {
               e.target.style.backgroundColor = "#4b7bff";
-              e.target.style.transform = "scale(1)";
             }}
           >
             <FaChevronLeft />
@@ -248,12 +254,13 @@ symptomCard: {
           </div>
 
           <button
-            style={styles.sliderButton}
+            style={{ ...styles.sliderButton, right: "0" }}
             onClick={handleNext}
-            onMouseEnter={(e) => Object.assign(e.target.style, styles.sliderButtonHover)}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#3a62d9";
+            }}
             onMouseLeave={(e) => {
               e.target.style.backgroundColor = "#4b7bff";
-              e.target.style.transform = "scale(1)";
             }}
           >
             <FaChevronRight />

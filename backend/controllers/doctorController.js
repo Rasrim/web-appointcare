@@ -50,12 +50,12 @@ exports.createDoctor = async (req, res) => {
 // Update doctor
 exports.updateDoctor = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { doctorId } = req.params;
     const { name, specialty, experience, fee, availability, timing, photo } = req.body;
 
     const result = await pool.query(
       'UPDATE doctors SET name = $1, specialty = $2, experience = $3, fee = $4, availability = $5, timing = $6, photo = $7 WHERE id = $8 RETURNING *',
-      [name, specialty, experience, fee, availability || '', timing || '', photo || '', id]
+      [name, specialty, experience, fee, availability || '', timing || '', photo || '', doctorId]
     );
 
     if (result.rows.length === 0) {
@@ -72,9 +72,9 @@ exports.updateDoctor = async (req, res) => {
 // Delete doctor
 exports.deleteDoctor = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { doctorId } = req.params;
 
-    const result = await pool.query('DELETE FROM doctors WHERE id = $1 RETURNING *', [id]);
+    const result = await pool.query('DELETE FROM doctors WHERE id = $1 RETURNING *', [doctorId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Doctor not found' });
@@ -84,5 +84,22 @@ exports.deleteDoctor = async (req, res) => {
   } catch (err) {
     console.error('Error deleting doctor:', err);
     res.status(500).json({ message: 'Error deleting doctor' });
+  }
+};
+
+// Get doctor schedule
+exports.getDoctorSchedule = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    
+    const result = await pool.query(
+      'SELECT * FROM doctor_schedule WHERE doctor_id = $1 ORDER BY day, start_time',
+      [doctorId]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching doctor schedule:', err);
+    res.status(500).json({ message: 'Error fetching doctor schedule' });
   }
 };

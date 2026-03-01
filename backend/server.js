@@ -7,8 +7,21 @@ const userRoutes = require('./Routes/User/userRoute');
 dotenv.config();
 
 const app = express();
-app.use(express.json());
-app.use(cors());
+
+// Configure CORS
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Increase payload limit to 50MB for image uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // PostgreSQL Connection Pool
 const pool = new Pool({
@@ -44,3 +57,5 @@ pool.connect((err, client, release) => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   }
 });
+
+module.exports = app;

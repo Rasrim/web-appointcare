@@ -13,7 +13,7 @@ const BookingCalendar = () => {
     return nepaliTime;
   };
 
-  const [currentDate, setCurrentDate] = useState(getNepaliTime());
+  const [currentDate, setCurrentDate] = useState(() => getNepaliTime());
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [appointments, setAppointments] = useState([]);
@@ -44,9 +44,13 @@ const BookingCalendar = () => {
   }, [currentDate, userId]);
 
   useEffect(() => {
+    // Auto-select today's date and set current month to today
+    const today = getNepaliTime();
+    setCurrentDate(today);
+    setSelectedDate(today.toISOString().split("T")[0]);
     fetchDoctors();
     fetchAppointments();
-  }, [currentDate, fetchAppointments]);
+  }, [fetchAppointments]);
 
   useEffect(() => {
     if (selectedDoctor && selectedDate) {

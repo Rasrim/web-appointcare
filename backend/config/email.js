@@ -23,10 +23,10 @@ const transporter = nodemailer.createTransport({
   }),
 });
 
-// Verify transporter connection
+// Verify transporter connection (non-critical)
 transporter.verify((error, success) => {
   if (error) {
-    console.error('Email transporter error:', error);
+    console.warn('Email transporter warning:', error.message);
   } else {
     console.log('Email transporter ready:', success);
   }
@@ -176,8 +176,111 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   }
 };
 
+/**
+ * Send appointment confirmation email
+ * @param {string} email - Patient email
+ * @param {object} appointmentData - Appointment details {doctorName, date, time, specialization, fee, patientName}
+ * @returns {Promise}
+ */
+const sendAppointmentConfirmationEmail = async (email, appointmentData) => {
+  const { doctorName, date, time, specialization, fee, patientName } = appointmentData;
+
+  const mailOptions = {
+    from: `"AppointCare" <${process.env.EMAIL_USER || 'appointcare@gmail.com'}>`,
+    to: email,
+    subject: `Appointment Confirmation - Dr. ${doctorName}`,
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0;">
+        <div style="background: linear-gradient(135deg, #3B82F6 0%, #2563eb 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h2 style="color: #fff; margin: 0; font-size: 28px;">📅 AppointCare</h2>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Appointment Confirmed</p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 40px 30px; border-radius: 0 0 8px 8px;">
+          <h3 style="color: #1a1a1a; margin-top: 0; font-size: 20px;">Hello ${patientName},</h3>
+          
+          <p style="color: #666; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+            Your appointment has been successfully booked! Here are the details:
+          </p>
+
+          <div style="background: #fff; border: 2px solid #3B82F6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 12px 0; color: #999; font-size: 14px; width: 40%;">Doctor:</td>
+                <td style="padding: 12px 0; color: #1a1a1a; font-weight: 600; font-size: 14px;">Dr. ${doctorName}</td>
+              </tr>
+              <tr style="border-top: 1px solid #eee;">
+                <td style="padding: 12px 0; color: #999; font-size: 14px;">Specialization:</td>
+                <td style="padding: 12px 0; color: #1a1a1a; font-weight: 600; font-size: 14px;">${specialization}</td>
+              </tr>
+              <tr style="border-top: 1px solid #eee;">
+                <td style="padding: 12px 0; color: #999; font-size: 14px;">Date:</td>
+                <td style="padding: 12px 0; color: #1a1a1a; font-weight: 600; font-size: 14px;">${date}</td>
+              </tr>
+              <tr style="border-top: 1px solid #eee;">
+                <td style="padding: 12px 0; color: #999; font-size: 14px;">Time:</td>
+                <td style="padding: 12px 0; color: #1a1a1a; font-weight: 600; font-size: 14px;">${time}</td>
+              </tr>
+              <tr style="border-top: 1px solid #eee;">
+                <td style="padding: 12px 0; color: #999; font-size: 14px;">Consultation Fee:</td>
+                <td style="padding: 12px 0; color: #3B82F6; font-weight: 600; font-size: 14px;">₹${fee}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="background: #e0f2fe; border-left: 4px solid #3B82F6; padding: 15px; border-radius: 4px; margin: 20px 0;">
+            <p style="color: #1e40af; margin: 0; font-size: 14px; font-weight: 500;">
+              💡 <strong>Reminder:</strong> Please arrive 5-10 minutes before your appointment time.
+            </p>
+          </div>
+
+          <div style="margin: 20px 0;">
+            <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 0;">
+              If you need to reschedule or cancel your appointment, please log in to your AppointCare account or contact our support team.
+            </p>
+          </div>
+
+          <div style="margin: 30px 0 20px 0;">
+            <a href="http://localhost:5173/dashboard" style="display: inline-block; background: #3B82F6; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+              View Appointment
+            </a>
+          </div>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <p style="color: #999; font-size: 12px; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              © 2026 AppointCare. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Appointment confirmation email sent successfully:', {
+      messageId: info.messageId,
+      to: email,
+      doctor: doctorName,
+      appointmentDate: date,
+      timestamp: new Date().toISOString(),
+    });
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Failed to send appointment confirmation email:', {
+      to: email,
+      doctor: doctorName,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+    throw error;
+  }
+};
+
 module.exports = {
   transporter,
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendAppointmentConfirmationEmail,
 };

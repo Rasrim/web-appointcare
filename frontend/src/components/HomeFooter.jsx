@@ -1,6 +1,7 @@
 import logoImage from "../images/AppointCarenobg.png";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const HomeFooter = () => {
   const navigate = useNavigate();
@@ -17,10 +18,11 @@ const HomeFooter = () => {
   const styles = {
     footer: {
       background: "#f9f9f9",
-      padding: "60px 40px 40px",
+      padding: "80px 40px 40px",
       borderTop: "1px solid #eee",
       width: "100%",
       boxSizing: "border-box",
+      marginTop: "40px",
     },
     footerTopSection: {
       display: "grid",
@@ -125,6 +127,40 @@ const HomeFooter = () => {
     e.target.style.background = "#3B82F6";
   };
 
+  const handleSearchingClick = () => {
+    const searchSection = document.getElementById("searchBar");
+    if (searchSection) {
+      searchSection.scrollIntoView({ behavior: "smooth" });
+    } else {
+      toast.warning("Search section not found");
+    }
+  };
+
+  const handleBookingClick = () => {
+    const calendarSection = document.getElementById("calendar");
+    if (calendarSection) {
+      calendarSection.scrollIntoView({ behavior: "smooth" });
+    } else {
+      toast.warning("Booking section not found");
+    }
+  };
+
+  const handleTimeSheetClick = () => {
+    toast.info("Please login to access timesheet");
+    navigate("/login");
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const navigateAndScrollToTop = (path) => {
+    scrollToTop();
+    setTimeout(() => {
+      navigate(path);
+    }, 300);
+  };
+
   return (
     <footer style={styles.footer}>
       <div style={styles.footerTopSection}>
@@ -132,34 +168,34 @@ const HomeFooter = () => {
           <h4 style={styles.footerTitle}>Service</h4>
           <ul style={styles.footerList}>
             <li>
-              <a
-                href="#"
-                style={styles.footerLink}
+              <button
+                onClick={handleSearchingClick}
+                style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
               >
                 Searching
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="#"
-                style={styles.footerLink}
+              <button
+                onClick={handleBookingClick}
+                style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
               >
                 Booking
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="#"
-                style={styles.footerLink}
+              <button
+                onClick={handleTimeSheetClick}
+                style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
               >
                 TimeSheet
-              </a>
+              </button>
             </li>
           </ul>
         </div>
@@ -169,7 +205,7 @@ const HomeFooter = () => {
           <ul style={styles.footerList}>
             <li>
               <button
-                onClick={() => navigate("/faq")}
+                onClick={() => navigateAndScrollToTop("/faq")}
                 style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
@@ -179,7 +215,7 @@ const HomeFooter = () => {
             </li>
             <li>
               <button
-                onClick={() => navigate("/blog")}
+                onClick={() => navigateAndScrollToTop("/blog")}
                 style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
@@ -189,7 +225,7 @@ const HomeFooter = () => {
             </li>
             <li>
               <button
-                onClick={() => navigate("/support")}
+                onClick={() => navigateAndScrollToTop("/support")}
                 style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
@@ -205,7 +241,7 @@ const HomeFooter = () => {
           <ul style={styles.footerList}>
             <li>
               <button
-                onClick={() => navigate("/about")}
+                onClick={() => navigateAndScrollToTop("/about")}
                 style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
@@ -215,7 +251,7 @@ const HomeFooter = () => {
             </li>
             <li>
               <button
-                onClick={() => navigate("/contact")}
+                onClick={() => navigateAndScrollToTop("/contact")}
                 style={{...styles.footerLink, background: "none", border: "none", padding: 0, textAlign: "left"}}
                 onMouseEnter={handleLinkHover}
                 onMouseLeave={handleLinkLeave}
@@ -234,7 +270,7 @@ const HomeFooter = () => {
         </div>
         <div style={styles.footerCenterLinks}>
           <button
-            onClick={() => navigate("/terms")}
+            onClick={() => navigateAndScrollToTop("/terms")}
             style={{...styles.footerLink, background: "none", border: "none", padding: 0}}
             onMouseEnter={handleLinkHover}
             onMouseLeave={handleLinkLeave}
@@ -242,7 +278,7 @@ const HomeFooter = () => {
             Terms
           </button>
           <button
-            onClick={() => navigate("/privacy")}
+            onClick={() => navigateAndScrollToTop("/privacy")}
             style={{...styles.footerLink, background: "none", border: "none", padding: 0}}
             onMouseEnter={handleLinkHover}
             onMouseLeave={handleLinkLeave}
@@ -250,39 +286,13 @@ const HomeFooter = () => {
             Privacy
           </button>
           <button
-            onClick={() => navigate("/cookies")}
+            onClick={() => navigateAndScrollToTop("/cookies")}
             style={{...styles.footerLink, background: "none", border: "none", padding: 0}}
             onMouseEnter={handleLinkHover}
             onMouseLeave={handleLinkLeave}
           >
             Cookies
           </button>
-        </div>
-        <div style={styles.socialLinks}>
-          <a
-            href="#"
-            style={styles.socialIcon}
-            onMouseEnter={handleSocialHover}
-            onMouseLeave={handleSocialLeave}
-          >
-            in
-          </a>
-          <a
-            href="#"
-            style={styles.socialIcon}
-            onMouseEnter={handleSocialHover}
-            onMouseLeave={handleSocialLeave}
-          >
-            f
-          </a>
-          <a
-            href="#"
-            style={styles.socialIcon}
-            onMouseEnter={handleSocialHover}
-            onMouseLeave={handleSocialLeave}
-          >
-            𝕏
-          </a>
         </div>
       </div>
     </footer>

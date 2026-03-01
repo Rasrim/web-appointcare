@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logoImage from "../images/AppointCarenobg.png";
 
-const HomeNavbar = ({ onBookAppointmentsClick }) => {
+const HomeNavbar = ({ onBookAppointmentsClick, onRecoveryClick }) => {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -124,10 +124,10 @@ const HomeNavbar = ({ onBookAppointmentsClick }) => {
   return (
     <nav style={styles.navbar}>
       <div style={styles.navContainer}>
-        <div style={styles.logo} onClick={() => navigate("/")}>
+        <Link to="/" style={styles.logo}>
           <img src={logoImage} alt="AppointCare" style={styles.logoImg} />
           <span style={styles.logoText}>AppointCare</span>
-        </div>
+        </Link>
         {isMobile && (
           <button
             style={styles.hamburgerMenu}
@@ -150,17 +150,7 @@ const HomeNavbar = ({ onBookAppointmentsClick }) => {
           </button>
           <button
             onClick={() => {
-              onBookAppointmentsClick();
-              if (isMobile) setShowMobileMenu(false);
-            }}
-            style={styles.navLink}
-            onMouseEnter={(e) => (e.target.style.color = styles.navLinkHover.color)}
-            onMouseLeave={(e) => (e.target.style.color = "#666")}
-          >
-            Calendar
-          </button>
-          <button
-            onClick={() => {
+              onRecoveryClick?.();
               if (isMobile) setShowMobileMenu(false);
             }}
             style={styles.navLink}

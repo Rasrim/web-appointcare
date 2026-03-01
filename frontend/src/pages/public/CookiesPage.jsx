@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import HomeNavbar from "../../components/shared/HomeNavbar";
+import HomeNavbar from "../../components/HomeNavbar";
 import HomeFooter from "../../components/shared/HomeFooter";
 import { FaArrowLeft } from "react-icons/fa";
 

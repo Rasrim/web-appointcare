@@ -1,11 +1,13 @@
 import {Route, Routes, Navigate} from 'react-router-dom';
 import './App.css'
 import React, { Suspense } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Home = React.lazy(() => import('./pages/private/Home'));
 const Login = React.lazy(() => import('./pages/public/Login'));
 const Register = React.lazy(() => import('./pages/public/Register'));
-const ForgotPassword = React.lazy(() => import('./pages/public/ForgotPassword'));
+const ForgotPassword = React.lazy(() => import('./pages/public/ForgotPasswordWithSecurityQuestions'));
 const ResetPassword = React.lazy(() => import('./pages/public/ResetPassword'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/Admin/AdminDashboard'));
@@ -22,6 +24,9 @@ const CookiesPage = React.lazy(() => import('./pages/public/CookiesPage'));
 const PolicyPage = React.lazy(() => import('./pages/public/PolicyPage'));
 const AllAppointments = React.lazy(() => import('./pages/AllAppointments'));
 const AllDoctors = React.lazy(() => import('./pages/AllDoctors'));
+const DoctorDetail = React.lazy(() => import('./pages/DoctorDetail'));
+const BookAppointmentDetails = React.lazy(() => import('./pages/BookAppointmentDetails'));
+const ManageSchedule = React.lazy(() => import('./pages/Admin/ManageSchedule'));
 
 function App() {
   return (
@@ -39,6 +44,10 @@ function App() {
         <Route path="/symptom/:symptomName" element={<SymptomDetail />} />
         <Route path="/all-appointments" element={<AllAppointments />} />
         <Route path="/all-doctors" element={<AllDoctors />} />
+        <Route path="/doctor/:id" element={<DoctorDetail />} />
+        <Route path="/book-appointment-details" element={<BookAppointmentDetails />} />
+        <Route path="/my-appointments" element={<AllAppointments />} />
+        <Route path="/admin/manage-schedule" element={<ManageSchedule />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -50,6 +59,18 @@ function App() {
         <Route path="/support" element={<Support />} />
       </Routes>
       </Suspense>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </>
   );
 }

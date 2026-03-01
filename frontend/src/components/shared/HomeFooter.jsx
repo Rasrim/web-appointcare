@@ -17,10 +17,11 @@ const HomeFooter = () => {
   const styles = {
     footer: {
       background: "#f9f9f9",
-      padding: "60px 40px 40px",
+      padding: "80px 40px 40px",
       borderTop: "1px solid #eee",
       width: "100%",
       boxSizing: "border-box",
+      marginTop: "40px",
     },
     footerTopSection: {
       display: "grid",
@@ -257,32 +258,6 @@ const HomeFooter = () => {
           >
             Cookies
           </button>
-        </div>
-        <div style={styles.socialLinks}>
-          <a
-            href="#"
-            style={styles.socialIcon}
-            onMouseEnter={handleSocialHover}
-            onMouseLeave={handleSocialLeave}
-          >
-            in
-          </a>
-          <a
-            href="#"
-            style={styles.socialIcon}
-            onMouseEnter={handleSocialHover}
-            onMouseLeave={handleSocialLeave}
-          >
-            f
-          </a>
-          <a
-            href="#"
-            style={styles.socialIcon}
-            onMouseEnter={handleSocialHover}
-            onMouseLeave={handleSocialLeave}
-          >
-            𝕏
-          </a>
         </div>
       </div>
     </footer>

@@ -12,8 +12,9 @@ export const registerSchema = z
       .email("Invalid email address"),
     phoneNumber: z
       .string()
-      .min(1, "Phone number is required")
-      .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+      .min(10, "Phone number must be 10 digits")
+      .max(10, "Phone number must be 10 digits")
+      .regex(/^9[87]\d{8}$/, "Phone must start with 9, second digit 8 or 7, then 8 more digits (e.g., 9869294659)"),
     gender: z
       .string()
       .min(1, "Gender is required"),
@@ -21,11 +22,11 @@ export const registerSchema = z
       .string()
       .min(1, "Password is required")
       .min(6, "Password must be at least 6 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number")
+      .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+      .regex(/[0-9]/, "Must contain at least one number")
       .regex(
         /[!@#$%^&*()_+\-={};":|,.<>/?]/,
-        "Password must contain at least one special character"
+        "Must contain at least one special character"
       ),
     confirmPassword: z.string().min(1, "Confirm Password is required"),
     birthDate: z

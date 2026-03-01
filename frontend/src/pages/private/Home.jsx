@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { API_URL } from "../../utils/api";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import doctorImage from "../../images/doctor1.png";
 import SymptomsSection from "../../components/SymptomsSection";
 import HomeNavbar from "../../components/HomeNavbar";
 import HomeFooter from "../../components/HomeFooter";
+import useDoctorSync from "../../hooks/useDoctorSync";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -13,12 +15,21 @@ const Home = () => {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fadeIn, setFadeIn] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(16); // Today is January 16
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [selectedTime, setSelectedTime] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const handleNavLinkClick = () => {
     const element = document.getElementById("calendar");
+    element?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleRecoveryClick = () => {
+    const element = document.getElementById("recovery");
     element?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -27,6 +38,49 @@ const Home = () => {
       navigate(`/all-doctors?search=${searchQuery}`);
     }
   };
+
+  const handleBookAppointmentClick = () => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      toast.info("Please login first to book an appointment", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      navigate("/login");
+    } else {
+      // User is logged in, scroll to calendar
+      const element = document.getElementById("calendar");
+      element?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Handle search input change - fetch results dynamically
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setSearchLoading(true);
+      const timer = setTimeout(async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/doctors`);
+          if (response.ok) {
+            const allDoctors = await response.json();
+            const query = searchQuery.toLowerCase();
+            const filtered = allDoctors.filter(doc => 
+              doc.name.toLowerCase().includes(query) || 
+              doc.specialty.toLowerCase().includes(query)
+            );
+            setSearchResults(filtered);
+            setShowSearchResults(true);
+          }
+        } finally {
+          setSearchLoading(false);
+        }
+      }, 300); // Debounce 300ms
+      return () => clearTimeout(timer);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  }, [searchQuery]);
 
   // Fade in animation on mount
   useEffect(() => {
@@ -43,24 +97,40 @@ const Home = () => {
   }, []);
 
   // Fetch doctors
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/doctors`);
-        if (response.ok) {
-          const data = await response.json();
-          setDoctors(data);
-        }
-      } finally {
-        setLoading(false);
+  const fetchDoctors = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/doctors`);
+      if (response.ok) {
+        const data = await response.json();
+        setDoctors(data);
       }
-    };
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDoctors();
+  }, []);
+
+  // Sync doctors when admin updates them
+  useDoctorSync(fetchDoctors);
+
+  // Auto-update date every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDate(new Date());
+      setSelectedDate(new Date().getDate());
+    }, 60000); // Update every 60 seconds (1 minute)
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <div style={{ ...styles.container, opacity: fadeIn ? 1 : 0, transition: "opacity 0.5s ease-in" }}>
-      <HomeNavbar onBookAppointmentsClick={handleNavLinkClick} />
+      <HomeNavbar onBookAppointmentsClick={handleNavLinkClick} onRecoveryClick={handleRecoveryClick} />
 
       {/* Add padding top to account for fixed navbar */}
       <div style={{ paddingTop: "70px" }}></div>
@@ -78,16 +148,9 @@ const Home = () => {
             <p style={styles.heroDescription}>
               Your health is our priority
             </p>
-            <div style={styles.doctorCount}>
-              <div style={styles.doctorAvatar}>
-                <span>👨‍⚕️</span>
-                <span>👩‍⚕️</span>
-              </div>
-              <span style={styles.doctorCountText}>+18 doctors are available</span>
-            </div>
             
             {/* Search Bar */}
-            <div style={styles.searchBarContainer}>
+            <div style={styles.searchBarContainer} id="searchBar">
               <input
                 type="text"
                 placeholder="Search by doctor name or specialty..."
@@ -99,9 +162,39 @@ const Home = () => {
                 }}
               />
               <button style={styles.searchButton} onClick={handleSearchClick}>Search</button>
+              
+              {/* Search Results Dropdown */}
+              {showSearchResults && (
+                <div style={styles.searchResultsDropdown}>
+                  {searchLoading ? (
+                    <div style={styles.loadingMessage}>Loading...</div>
+                  ) : searchResults.length > 0 ? (
+                    <div>
+                      {searchResults.map((doctor, index) => (
+                        <div 
+                          key={index} 
+                          style={styles.resultItem}
+                          onClick={() => {
+                            setSearchQuery("");
+                            setShowSearchResults(false);
+                            navigate(`/doctor/${doctor.id}`);
+                          }}
+                        >
+                          <div style={styles.resultItemContent}>
+                            <h4 style={styles.resultName}>{doctor.name}</h4>
+                            <p style={styles.resultSpecialty}>{doctor.specialty}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={styles.noResults}>
+                      No doctors found for "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            <button style={styles.ctaButton} onClick={() => document.getElementById("doctors").scrollIntoView({ behavior: "smooth" })}>Find doctors</button>
           </div>
 
           {/* Hero Image */}
@@ -117,7 +210,15 @@ const Home = () => {
       <section style={styles.doctorsSection}>
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>Recommended Doctors</h2>
-          <a href="#" style={styles.viewAllLink}>View All ›</a>
+          <a 
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              navigate('/all-doctors');
+            }}
+            style={{...styles.viewAllLink, cursor: 'pointer'}}
+          >
+            View All ›
+          </a>
         </div>
 
         {!loading && doctors.length > 0 ? (
@@ -126,7 +227,7 @@ const Home = () => {
               <div key={index} style={styles.doctorCard}>
                 <div style={styles.doctorImageContainer}>
                   <img 
-                    src={doctor.photo || doctorImage} 
+                    src={doctor.photo && doctor.photo.trim() ? `${API_URL}/uploads/${doctor.photo}` : doctorImage} 
                     alt={doctor.name}
                     style={styles.doctorImage}
                   />
@@ -148,7 +249,7 @@ const Home = () => {
                   <span style={styles.timingText}>{doctor.timing || "10:00 AM-01:00 PM"}</span>
                   <span style={styles.startingText}>Starting</span>
                 </div>
-                <button style={styles.appointmentBtn}>Book an appointment</button>
+                <button style={styles.appointmentBtn} onClick={handleBookAppointmentClick}>Book an appointment</button>
               </div>
             ))}
           </div>
@@ -160,7 +261,9 @@ const Home = () => {
       </section>
 
       {/* Symptoms Section */}
-      <SymptomsSection />
+      <section id="recovery">
+        <SymptomsSection />
+      </section>
 
       {/* Calendar Section for Booking */}
       <section id="calendar" style={styles.calendarSection}>
@@ -170,7 +273,9 @@ const Home = () => {
           
           <div style={styles.calendarContent}>
             <div style={styles.miniCalendarContainer}>
-              <h3 style={styles.calendarMonthTitle}>January 2026</h3>
+              <h3 style={styles.calendarMonthTitle}>
+                {currentDate.toLocaleString("default", { month: "long", year: "numeric" })}
+              </h3>
               <div style={styles.daysOfWeek}>
                 <div style={styles.dayHeader}>Sun</div>
                 <div style={styles.dayHeader}>Mon</div>
@@ -181,15 +286,15 @@ const Home = () => {
                 <div style={styles.dayHeader}>Sat</div>
               </div>
               <div style={styles.daysGrid}>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate() }, (_, i) => i + 1).map((day) => (
                   <button 
                     key={day} 
                     onClick={() => setSelectedDate(day)}
                     style={{
                       ...styles.dayButton,
-                      backgroundColor: day === 16 ? "#3B82F6" : day === selectedDate ? "#E0E7FF" : "white",
-                      color: day === 16 ? "white" : "#333",
-                      fontWeight: day === 16 ? "700" : "500",
+                      backgroundColor: day === currentDate.getDate() ? "#3B82F6" : day === selectedDate ? "#E0E7FF" : "white",
+                      color: day === currentDate.getDate() ? "white" : "#333",
+                      fontWeight: day === currentDate.getDate() ? "700" : "500",
                     }}
                   >
                     {day}
@@ -220,7 +325,7 @@ const Home = () => {
               <button 
                 style={styles.bookButton}
                 onClick={() => {
-                  alert("Please sign in first to book an appointment");
+                  toast.info("To book appointments, please login first!");
                   navigate("/login");
                 }}
               >
@@ -321,12 +426,13 @@ const styles = {
     gap: "40px",
     width: "100%",
     maxWidth: "100%",
-    overflow: "hidden",
+    overflow: "visible",
     padding: "clamp(40px, 10vw, 80px) 20px",
     background: "linear-gradient(135deg, #5B9FBD 0%, #7AADBE 100%)",
     borderRadius: "20px",
     marginBottom: "40px",
     boxShadow: "0 10px 40px rgba(91, 159, 189, 0.2)",
+    position: "relative",
   },
 
   heroContent: {
@@ -738,6 +844,93 @@ const styles = {
     cursor: "pointer",
     fontWeight: "600",
     transition: "all 0.3s ease",
+  },
+  searchBarContainer: {
+    position: "relative",
+    display: "flex",
+    gap: "12px",
+    maxWidth: "600px",
+    margin: "30px auto 0",
+    zIndex: 100,
+  },
+  searchInput: {
+    flex: 1,
+    padding: "12px 20px",
+    fontSize: "1rem",
+    border: "2px solid #e0e0e0",
+    borderRadius: "8px",
+    outline: "none",
+    transition: "border-color 0.3s ease",
+    ":focus": {
+      borderColor: "#3B82F6",
+    },
+  },
+  searchButton: {
+    padding: "12px 32px",
+    background: "#3B82F6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "1rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    ":hover": {
+      background: "#2563EB",
+    },
+  },
+  searchResultsDropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    background: "#fff",
+    border: "1px solid #e0e0e0",
+    borderTop: "none",
+    borderRadius: "0 0 8px 8px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+    maxHeight: "none",
+    overflowY: "auto",
+    zIndex: 10000,
+    marginTop: "4px",
+  },
+  resultItem: {
+    padding: "12px 20px",
+    cursor: "pointer",
+    transition: "background-color 0.2s ease",
+    borderBottom: "1px solid #f0f0f0",
+    ":hover": {
+      background: "#f9f9f9",
+    },
+  },
+  resultItemContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  resultName: {
+    margin: "0",
+    fontSize: "0.95rem",
+    fontWeight: "600",
+    color: "#1a1a1a",
+  },
+  resultSpecialty: {
+    margin: "0",
+    fontSize: "0.85rem",
+    color: "#3B82F6",
+    fontWeight: "500",
+  },
+  noResults: {
+    padding: "20px",
+    textAlign: "center",
+    color: "#999",
+    fontSize: "0.95rem",
+  },
+  loadingMessage: {
+    padding: "20px",
+    textAlign: "center",
+    color: "#666",
+    fontSize: "0.95rem",
   },
   bookButton: {
     width: "100%",
